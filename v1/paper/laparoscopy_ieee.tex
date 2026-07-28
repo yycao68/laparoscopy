@@ -1,0 +1,48 @@
+% Journal submission version — ANONYMIZED for double-anonymous review
+% (IEEE RAS rules). The paper content lives in body.tex, shared with
+% laparoscopy_arxiv.tex (the non-anonymous arXiv version).
+\documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{balance}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathmorphing,patterns}
+
+\graphicspath{{figures/}}
+
+% ---- shared tikz styles for the plant schematic ----
+\tikzset{
+  tip/.style={circle,draw,fill=black,minimum size=3.4pt,inner sep=0pt},
+  pivot/.style={circle,draw,fill=white,minimum size=4.5pt,inner sep=0pt,line width=0.7pt},
+  sig/.style={-{Latex[length=2mm]},line width=0.6pt},
+  dist/.style={-{Latex[length=2mm]},red!75,line width=0.9pt}
+}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+\title{A Predictive Interaction Dynamics Framework for\\Safe Robot-Assisted Laparoscopy with Remote Center-of-Motion Constraints}
+
+% Double-anonymous review: author information omitted (IEEE RAS rules).
+\author{Anonymous~Author(s)%
+\thanks{Manuscript received June 2026. Author information omitted for double-anonymous review.}%
+}
+
+\maketitle
+% PaperPlaza compliance: no page numbers (header digits trip the
+% margin-imposition check; the submission system adds its own numbering).
+\thispagestyle{empty}
+\pagestyle{empty}
+
+\input{body}
+
+\end{document}

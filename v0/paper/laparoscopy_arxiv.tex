@@ -1,0 +1,50 @@
+% arXiv preprint version — WITH author information.
+% The paper content lives in body.tex, shared with main.tex (the anonymized
+% journal-submission version). Build: latexmk -pdf laparoscopy_arxiv.tex
+\documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{balance}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,decorations.pathmorphing,patterns}
+
+\graphicspath{{figures/}}
+
+% ---- shared tikz styles for the plant schematic ----
+\tikzset{
+  tip/.style={circle,draw,fill=black,minimum size=3.4pt,inner sep=0pt},
+  pivot/.style={circle,draw,fill=white,minimum size=4.5pt,inner sep=0pt,line width=0.7pt},
+  sig/.style={-{Latex[length=2mm]},line width=0.6pt},
+  dist/.style={-{Latex[length=2mm]},red!75,line width=0.9pt}
+}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+\title{RCM-Constrained Impedance MPC for\\Force-Safe Robotic Laparoscopy}
+
+\author{Yongyan~Cao%
+\thanks{Preprint, June 2026. This work has been submitted for possible publication; copyright may be transferred without notice.}%
+\thanks{Corresponding author: Yongyan Cao (e-mail: yongyancao@gmail.com).}%
+% TODO: add author affiliations here before uploading to arXiv.
+}
+
+\markboth{Preprint}%
+{Cao: RCM-Constrained Impedance MPC for Force-Safe Robotic Laparoscopy}
+
+\maketitle
+
+\input{body}
+
+\balance
+
+\end{document}

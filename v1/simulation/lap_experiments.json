@@ -1,0 +1,67 @@
+{
+  "A": {
+    "Random walk (no osc)": {
+      "resp_resid_mm": 0.7445602680350909,
+      "tip_rmse_mm": 2.3097759461983918
+    },
+    "Osc -20% (0.20 Hz)": {
+      "resp_resid_mm": 0.7445602680350909,
+      "tip_rmse_mm": 2.3097759461983918
+    },
+    "Osc matched (0.25)": {
+      "resp_resid_mm": 0.7445602680350909,
+      "tip_rmse_mm": 2.3097759461983918
+    },
+    "Osc +20% (0.30 Hz)": {
+      "resp_resid_mm": 0.7445602680350909,
+      "tip_rmse_mm": 2.3097759461983918
+    }
+  },
+  "B": {
+    "0 ms": {
+      "tip_rmse_mm": 2.4058067868109108,
+      "ss_err_mm": 0.22854405057456487,
+      "peak_tip_mm": 5.050300034928012,
+      "max_rcm_mm": 0.34665483306172484,
+      "controller": "constrained joint/task"
+    },
+    "5 ms": {
+      "tip_rmse_mm": 2.5159145429889813,
+      "ss_err_mm": 0.2207061521321865,
+      "peak_tip_mm": 5.14908074503679,
+      "max_rcm_mm": 0.5194459010488446,
+      "controller": "constrained joint/task"
+    },
+    "10 ms": {
+      "tip_rmse_mm": 2.7859547222630208,
+      "ss_err_mm": 0.40443280778815976,
+      "peak_tip_mm": 5.813704827441516,
+      "max_rcm_mm": 5.673362490031498,
+      "controller": "tip-MPC fallback"
+    },
+    "20 ms": {
+      "tip_rmse_mm": 3.2463107877389015,
+      "ss_err_mm": 2.123080545695547,
+      "peak_tip_mm": 5.907208960925191,
+      "max_rcm_mm": 6.034739651144394,
+      "controller": "tip-MPC fallback"
+    }
+  },
+  "C": {
+    "0 mm": {
+      "max_rcm_mm": 0.3505970550455174,
+      "ss_err_mm": 0.2266756271838357,
+      "peak_tissue_N": 1.1804524651492991
+    },
+    "1 mm": {
+      "max_rcm_mm": 0.34904436366103475,
+      "ss_err_mm": 0.22091160873171856,
+      "peak_tissue_N": 1.1806532129205685
+    },
+    "2 mm": {
+      "max_rcm_mm": 0.34904436366103475,
+      "ss_err_mm": 0.22091160873171856,
+      "peak_tissue_N": 1.1806532129205685
+    }
+  }
+}

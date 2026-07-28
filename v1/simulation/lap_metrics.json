@@ -1,0 +1,42 @@
+{
+  "Position impedance": {
+    "tip_rmse_mm": 8.635122124475512,
+    "ss_err_mm": 3.9435850338497933,
+    "peak_tissue_N": 0.8516202832877426,
+    "max_rcm_mm": 8.125157037413903,
+    "peak_wall_N": 1.6250314074827805,
+    "resp_resid_mm": 2.2922595439967437,
+    "qp_median_ms": 0.0,
+    "qp_p95_ms": 0.0
+  },
+  "PID + force governor": {
+    "tip_rmse_mm": 8.692359812915521,
+    "ss_err_mm": 4.905274625529379,
+    "peak_tissue_N": 0.7843923364619072,
+    "max_rcm_mm": 8.125157037413903,
+    "peak_wall_N": 1.6250314074827805,
+    "resp_resid_mm": 2.082961393636678,
+    "qp_median_ms": 0.0,
+    "qp_p95_ms": 0.0
+  },
+  "Tip-only MPC": {
+    "tip_rmse_mm": 2.5535182375353846,
+    "ss_err_mm": 0.6362014988712659,
+    "peak_tissue_N": 1.1886083896133746,
+    "max_rcm_mm": 5.530539748010028,
+    "peak_wall_N": 1.1061079496020054,
+    "resp_resid_mm": 0.5566789645279602,
+    "qp_median_ms": 0.09522947948426008,
+    "qp_p95_ms": 0.13292321236804128
+  },
+  "Constrained joint/task MPC": {
+    "tip_rmse_mm": 2.249187776350523,
+    "ss_err_mm": 1.7846748862631183,
+    "peak_tissue_N": 1.177150934300368,
+    "max_rcm_mm": 0.3539726360661832,
+    "peak_wall_N": 0.07079452721323663,
+    "resp_resid_mm": 0.5889212378591212,
+    "qp_median_ms": 0.4574584309011698,
+    "qp_p95_ms": 0.5405856529250741
+  }
+}

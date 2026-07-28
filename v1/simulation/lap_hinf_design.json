@@ -1,0 +1,27 @@
+{
+  "H2": {
+    "spec_radius": 0.818181592656968,
+    "K_norm": 11243.094335511709
+  },
+  "theorem1_gain_match_maxabs": 9.781615517567843e-10,
+  "Hinf": {
+    "gamma_min": 1.008121704378015,
+    "spec_radius_at_gamma_min": 0.9999998999991767,
+    "gamma_deploy": 1.5121825565670226,
+    "spec_radius_deploy": 0.9728488712068725,
+    "K_norm": 954.7684226018719,
+    "reference_disturbance_norm": 1.0,
+    "local_output_bound": 1.008121704378015
+  },
+  "Hinf_gamma_vs_inertia_scale": {
+    "x0.5": 1.005106013092479,
+    "x1.0": 1.008121704378015,
+    "x2.0": 1.012951451993026
+  },
+  "contact_linearization": {
+    "delta0_m": 0.015,
+    "k_e": 500.0,
+    "exponent": 1.5,
+    "slope_N_per_m": 91.85586535436917
+  }
+}

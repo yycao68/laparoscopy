@@ -1,0 +1,26 @@
+{
+  "Classical Impedance": {
+    "tip_rmse_mm": 8.635122124475512,
+    "ss_err_mm": 3.9435850338497933,
+    "peak_tissue_N": 0.8516202832877426,
+    "max_rcm_mm": 8.125157037413903,
+    "peak_wall_N": 1.6250314074827805,
+    "resp_resid_mm": 2.2922595439967437
+  },
+  "Impedance MPC": {
+    "tip_rmse_mm": 2.564654197759657,
+    "ss_err_mm": 0.6504315695205678,
+    "peak_tissue_N": 1.1884677733041737,
+    "max_rcm_mm": 5.54846104066011,
+    "peak_wall_N": 1.109692208132022,
+    "resp_resid_mm": 0.5784541936330584
+  },
+  "Impedance MPC + Kalman": {
+    "tip_rmse_mm": 0.18526718471308123,
+    "ss_err_mm": 0.03118492775199089,
+    "peak_tissue_N": 1.2103179056978646,
+    "max_rcm_mm": 3.395430730610661,
+    "peak_wall_N": 0.6790861461221323,
+    "resp_resid_mm": 0.13850384739046173
+  }
+}

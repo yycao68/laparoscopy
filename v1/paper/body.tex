@@ -1,0 +1,620 @@
+\begin{abstract}
+Robot-assisted laparoscopy is fundamentally an interaction-dynamics problem: tool motion, trocar remote-center-of-motion (RCM) consistency, and nonlinear tissue contact must be regulated simultaneously under safety and actuator constraints. We develop a predictive interaction-dynamics framework that combines a configuration-invariant linear double-integrator backbone with horizon-wide optimization of tool motion, RCM consistency, and interaction forces. A feedforward layer normalizes the nonlinear manipulator dynamics into a constant-state, configuration-dependent-input residual model, and a joint/task quadratic program regulates the resulting interaction state with decision variables containing Cartesian tip force and seven auxiliary joint torques. This gives the optimizer direct authority over horizon-wide interaction constraints while preserving the constant state-transition structure used for fast prediction. A dead-zone recursive-least-squares estimator identifies Hunt--Crossley tissue stiffness and calibrates an adaptive penetration constraint; an oscillator-augmented disturbance model is retained as an internal-model option for periodic respiration. In parallel, an offline $H_2/H_\infty$ design computes the unconstrained interaction-dynamics feedback, a low-level 1\,kHz state-feedback option, and a common-Lyapunov disturbance-to-applied-force certificate for the linear post-normalization plant. In MuJoCo~3.6 simulation on a 7-DoF Franka FR3, the nominal 15\,mm palpation task gives 0.354\,mm maximum RCM deviation, compared with 8.13\,mm for position impedance and 5.53\,mm for tip-only MPC, while keeping peak tissue force at 1.18\,N under a configured 3\,N engineering threshold. The stiffness estimate remains within 7.1\% over $k_e=200$--$1200\,\mathrm{N/m}^{1.5}$. Across eight randomized simulation episodes, joint/task predictive control gives $3.08\pm0.93$\,mm tip RMSE and $1.214\pm1.612$\,mm maximum RCM deviation. Median QP wall time is about 0.45\,ms. These are simulation results, not a clinical safety guarantee.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Surgical robotics, interaction dynamics, model predictive control, remote center of motion, Hunt--Crossley contact model, $H_\infty$ control.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+\IEEEPARstart{S}{afe} physical interaction is fundamentally an interaction-dynamics problem. The controller must shape how commanded motion, environmental contact, human or tissue-applied forces, and actuator limits evolve together, rather than treating motion tracking and safety as separate layers. Robot-assisted laparoscopy is a particularly demanding instance of this problem because three coupled interactions occur at the same time: tool--tissue interaction at the surgical site, tool--trocar interaction at the abdominal wall, and robot--environment interaction through the full manipulator and instrument.
+
+Existing interaction-dynamics shaping methods in surgical robotics are dominated by impedance control and admittance-like variants. These methods are useful because they give a compliant closed-loop relation between force and motion, but impedance is only one parameterization of interaction dynamics. In laparoscopy, fixed or gain-scheduled impedance does not directly optimize steady-state force offsets, horizon-wide RCM consistency, actuator saturation, and nonlinear tissue penetration in one prediction. The result is a structural gap between the interaction dynamics that must be kept safe and the variables that a controller can optimize.
+
+We formulate robotic laparoscopy as a constrained interaction-dynamics regulation problem. Rather than predicting the full nonlinear robot dynamics over the horizon, a feedforward layer normalizes the robot into a configuration-invariant linear double-integrator backbone: the state transition of the interaction dynamics is constant, while robot configuration appears only through the input matrix. The present paper lifts this backbone into joint/task coordinates and adds adaptive penetration rows so that tool motion, trocar consistency, tissue interaction, and actuator limits are optimized within one predictive interaction-dynamics framework.
+
+\subsection{Related Work}
+
+\emph{RCM enforcement.} Robot-assisted laparoscopy has historically enforced the RCM \emph{kinematically}, through a constrained-Jacobian 
+formulation projecting the commanded tool-tip motion onto the subspace consistent with a stationary trocar point~\cite{aghakhani2013}; 
+more recent schemes move enforcement to the \emph{torque} level, treating the RCM as a holonomic constraint with a Lagrange multiplier 
+and splitting the joint torque into constraint-maintaining and free-motion components via projection-based inverse dynamics~\cite{sandoval2018}. 
+Both families enforce the pivot only at the current instant---the predicted future trajectory is left unconstrained. Imposing the RCM \emph{predictively}, 
+as a hard constraint at every horizon step, is one of our contributions.
+
+\emph{Predictive variable impedance.} Roveda \emph{et al.}~\cite{roveda2025} regulate interaction dynamics through MPC-selected impedance gains, adaptive Hunt--Crossley estimation, and an energy tank; Anand \emph{et al.}~\cite{anand2022} use learned dynamics and sampled stiffness optimization. In our terminology, impedance is one realization of interaction dynamics. We also estimate Hunt--Crossley parameters, but use them to form a penetration-output row while optimizing tip force and RCM-authority torque directly. A constraint-matched MPVIC implementation remains an important missing baseline.
+
+\emph{Robust interaction-dynamics certificates.} The surgical-robot literature often uses passivity to argue safe interaction, but passivity is an energy statement and does not by itself bound the instantaneous peak force that can damage tissue. We therefore retain an $H_\infty$ synthesis path for the linear post-normalization interaction model: the $H_2$ solution gives the nominal impedance realization, while the $H_\infty$ solution bounds the disturbance-to-applied-force channel under a stated residual bound. This certificate is design-level and model-dependent; the simulation force rows are still reported separately because nonlinear contact, sensing, and inter-sample effects create a realized-versus-predicted margin.
+
+The contributions of this paper are:
+\textbf{Predictive interaction-dynamics formulation} (Section~\ref{sec:mpc}): robotic laparoscopy is posed as an interaction-dynamics optimization problem in which motion accuracy, RCM consistency, tissue interaction, actuator limits, and force safety are optimized within one predictive framework. The online decision combines Cartesian tip force and seven joint correction torques, giving the nominal benchmark a maximum RCM deviation of 0.354\,mm, compared with 8.13\,mm for position impedance and 5.53\,mm for tip-only MPC.
+\textbf{Configuration-invariant interaction predictor and adaptive interaction constraints}: the predictor has a constant state-transition matrix while robot kinematics and inertia enter only through the input map. RCM is enforced as a structured horizon-wide interaction constraint, and dead-zone RLS calibrates a Hunt--Crossley penetration constraint and deep-reference feasibility backstop. The estimator and force response are verified over three tissue stiffnesses, three configured thresholds, sensor noise, bias, and stick--slip friction.
+\textbf{Certified linear interaction-design layer and measured robustness}: exact-ZOH input terms, total feedforward-plus-MPC actuator limits, an oscillator disturbance option, a stable infeasibility fallback, and a latency supervisor are integrated around the same interaction-dynamics backbone. Offline $H_2/H_\infty$ and common-$P$ LMI designs provide a low-level 1\,kHz state-feedback option and a linear disturbance-to-applied-force certificate. Evaluation includes a PID-plus-force baseline, parameter sweeps, eight randomized episodes, oscillator detuning, control latency, trocar clearance, and measured QP wall time.
+
+\section{Interaction Dynamics Formulation}\label{sec:dynamics}
+
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[scale=1.0,every node/.style={font=\footnotesize}]
+  % manipulator (7-DoF) applying joint torque tau / tip force F
+  \node[draw,fill=gray!15,minimum width=11mm,minimum height=9mm,align=center]
+       (man) at (-2.95,2.55) {manip.\\7-DoF};
+  \draw[sig] (man.east)--(-1.85,2.4);
+  \node[above,font=\scriptsize] at (-2.2,2.78) {$\tau,\,F$};
+  % rigid instrument shaft: flange (p_ee) -> trocar -> tip (p_tip)
+  \draw[line width=2.6pt,gray!70,line cap=round] (-1.7,2.5)--(1.3,-1.5);
+  \node[tip] (ee) at (-1.7,2.5){};
+  \node[above,font=\scriptsize] at (-1.6,2.56) {$p_\text{ee}$};
+  % shaft direction
+  \draw[-{Latex[length=1.4mm]}] (-1.05,1.6)--(-0.6,1.0);
+  \node[right,font=\scriptsize] at (-0.62,1.35) {$\hat s$};
+  % abdominal wall (hatched) with the trocar pivot
+  \fill[pattern=north east lines,pattern color=gray] (-2.7,0.5) rectangle (-0.45,0.74);
+  \fill[pattern=north east lines,pattern color=gray] (0.05,0.5) rectangle (2.3,0.74);
+  \draw[line width=0.8pt] (-2.7,0.5)--(-0.45,0.5);
+  \draw[line width=0.8pt] (0.05,0.5)--(2.3,0.5);
+  \node[left,font=\scriptsize,align=right] at (-2.72,0.62) {abdominal\\ wall};
+  % trocar / RCM pivot point  p_rcm,  Phi = 0
+  \node[pivot] (rcm) at (-0.2,0.5){};
+  \draw[line width=0.3pt] (rcm)--(0.32,1.08);
+  \node[anchor=west,font=\scriptsize,align=left] at (0.34,1.16) {RCM / trocar\\ $p_\text{rcm}(t)$};
+  % lateral trocar force lambda  (deviation Phi must be 0)
+  \draw[{Latex[length=1.4mm]}-{Latex[length=1.4mm]}] (-0.95,0.18)--(0.55,0.18);
+  \node[below,font=\scriptsize] at (-0.2,0.16) {$\lambda$\;($\Phi(q,t)=0$)};
+  % respiration motion of the wall / RCM
+  \draw[{Latex[length=1.4mm]}-{Latex[length=1.4mm]}] (2.05,0.32)--(2.05,0.92);
+  \node[right,font=\scriptsize,align=left] at (2.1,0.62) {respiration\\ (rheonomic)};
+  % soft-tissue surface (Hunt--Crossley), hatched, with penetration delta
+  \fill[pattern=north west lines,pattern color=orange!70] (-0.6,-1.25) rectangle (2.7,-1.55);
+  \draw[line width=0.8pt] (-0.6,-1.25)--(2.7,-1.25);
+  \node[font=\scriptsize,align=center] at (0.55,-1.92) {soft tissue, Hunt--Crossley $(k,b)$};
+  % tool tip pressing on the tissue
+  \node[tip] (tp) at (1.3,-1.5){};
+  \node[right,font=\scriptsize] at (1.38,-1.5) {$p_\text{tip}$};
+  % penetration delta
+  \draw[{Latex[length=1.2mm]}-{Latex[length=1.2mm]}] (0.82,-1.25)--(0.82,-1.5);
+  \node[left,font=\scriptsize] at (0.8,-1.37) {$\delta$};
+  % contact normal force F_ext <= F_max (red), along normal n-hat
+  \draw[dist] (1.75,-1.35)--(1.75,-0.55);
+  \node[red!75,right,font=\scriptsize] at (1.81,-0.82) {$F_\text{ext}\le F_\text{max}$};
+  \node[above,font=\scriptsize] at (1.75,-0.5) {$\hat n$};
+\end{tikzpicture}}
+\caption{RCM-constrained laparoscopic plant, mapping the variables of this
+section onto the physical parts: a 7-DoF manipulator applies joint torque
+$\tau$ and tip force $F$ \eqref{eq:eom} through a rigid instrument with flange
+$p_\text{ee}$, tip $p_\text{tip}$, and shaft direction $\hat s$. The instrument
+pivots about the trocar incision---the remote center of motion $p_\text{rcm}(t)$,
+which may vary in the general model but is fixed in the experiments---where the lateral deviation
+$\Phi(q,t)$ \eqref{eq:rcm} must be held at zero against the lateral trocar force
+$\lambda$. The tip presses on soft tissue modeled by Hunt--Crossley contact
+(stiffness $k$, damping $b$, penetration $\delta$) \eqref{eq:hc}, producing the
+contact force $F_\text{ext}$ regulated relative to the configured force limit
+$F_\text{max}$ along the contact normal $\hat n$. The implemented respiratory
+disturbance moves the planar tissue surface along the shaft direction.}
+\label{fig:plant}
+\end{figure}
+
+\subsection{Robot Dynamics}
+
+The manipulator equation of motion of~\cite{cao2026phri} is retained:
+\begin{equation}
+M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau + J^\top(q) F_{\text{ext}},
+\label{eq:eom}
+\end{equation}
+where $F_{\text{ext}} \in \mathbb{R}^6$ is now the \emph{tool--tissue} wrench rather than the human-applied wrench. The 7-DoF manipulator carries a 30\,cm rigid laparoscopic instrument; the dynamic structure and the operational-space inertia $\Lambda(q) = (J_v M^{-1} J_v^\top)^{-1}$~\cite{khatib1987} are unchanged.
+
+\subsection{Tool--Trocar Interaction Constraint}
+
+Let $p_{\text{rcm}}(t) \in \mathbb{R}^3$ denote the trocar point, allowed to vary slowly as the patient breathes. With end-effector flange $p_{\text{ee}}(q)$, tool tip $p_{\text{tip}}(q)$, and shaft direction $\hat{s}(q) = (p_{\text{tip}} - p_{\text{ee}})/\|p_{\text{tip}} - p_{\text{ee}}\|$, the perpendicular deviation of the trocar from the tool axis is
+\begin{equation}
+\Phi(q,t) =
+\underbrace{\big(I_3-\hat{s}\hat{s}^{\top}\big)}_{P_{\perp}(\hat s)}
+\big(p_{\text{rcm}} - p_{\text{ee}}\big),
+\label{eq:rcm}
+\end{equation}
+and the RCM constraint is $\Phi(q,t) = 0$. Although \eqref{eq:rcm} is written as a redundant three-vector, $P_\perp\hat{s}=0$, so the independent lateral constraint has rank two. Equivalently, one may choose an orthonormal normal-plane basis $E_\perp(\hat{s})\in\mathbb{R}^{2\times3}$ and enforce $\phi=E_\perp\Phi\in\mathbb{R}^2$. The implementation keeps the redundant three-component $\Phi$ because $\|\Phi\|_2$ is the physical lateral deviation and componentwise prediction rows are convenient for the QP. Because $p_{\text{rcm}}(t)$ depends explicitly on time, the RCM is a rheonomic holonomic constraint. Differentiating the redundant form, $\dot{\Phi} = J_c(q,t)\dot{q} + \partial\Phi/\partial t$ with $J_c = \partial\Phi/\partial q$, and the constrained dynamics may be written as
+\begin{equation}
+M\ddot{q} + C\dot{q} + G = \tau + J_c^\top \lambda + J^\top F_{\text{ext}},
+\label{eq:constrained}
+\end{equation}
+with $\lambda \in \mathbb{R}^3$ a redundant lateral trocar-force representation satisfying $\hat{s}^\top\lambda=0$; in a minimal basis this term is $J_\phi^\top\mu$, $J_\phi=E_\perp J_c$, $\mu\in\mathbb{R}^2$. The RCM acts on $q$, not directly on the residual state of the predictive architecture; it is imposed via the kinematic chain $q_k \to (p_{\text{tip},k}, p_{\text{ee},k}) \to \Phi_k$ at every horizon step without affecting the constant-$A_d$ structure.
+
+\subsection{Tool--Tissue Interaction Constraint}
+
+Where~\cite{cao2026phri} modelled the human push as an unknown bounded force absorbed by the integrating disturbance state, the laparoscopic interaction force has known structure. We adopt the Hunt--Crossley model~\cite{hunt1975,diolaiti2005}:
+\begin{equation}
+F_{\text{ext}}(\delta, \dot{\delta}) = k_e \delta^n (1 + b\dot{\delta}), \quad \delta \ge 0,
+\label{eq:hc}
+\end{equation}
+with penetration depth $\delta$, stiffness $k_e$, exponent $n=1.5$, and damping $b$. Accordingly, $k_e$ has units $\mathrm{N/m}^{1.5}$ in this study. The unknown parameters $\theta=[k_e,b]^\top$ are adapted online (Section~\ref{sec:tissue}).
+
+The implementation uses a planar surface with fixed normal $\hat n=\hat s_0$, so $\delta=\max(0,(p_{\text{tip}}-p_c)^\top\hat n)$ and $\dot\delta=\dot p_{\text{tip}}^\top\hat n$. The equations extend to a rotating contact frame, but curved-surface sliding is not claimed as verified here. Heterogeneity is tested through independent episodes at $k_e=200$, 500, and $1200\,\mathrm{N/m}^{1.5}$ rather than an unverified within-episode boundary crossing.
+
+\subsection{Interaction Disturbance Model}\label{sec:dist}
+
+The lumped disturbance acting on the Cartesian residual dynamics decomposes as
+\begin{equation}
+d(t) = d_{\text{tissue}}(\delta, \dot{\delta}; \theta) + d_{\text{resp}}(t) + d_{\text{trem}}(t) + d_{\text{tro}}(t) + \epsilon_m(t),
+\label{eq:dist}
+\end{equation}
+where $d_{\text{tissue}}$ is represented explicitly in the constrained output, and $d_{\text{resp}},d_{\text{tro}}$, and residual model error act through the measured plant. The structured tissue term is predicted by the Hunt--Crossley estimator; the remaining low-frequency residual can be carried by the inherited offset-free disturbance state~\cite{pannocchia2003,rawlings2017}. Its practical effect is evaluated through the measured stress tests rather than used to claim a global nonlinear force theorem.
+
+The important distinction is between state-dependent contact and exogenous uncertainty. Because penetration is a function of the planned tip trajectory, the structured Hunt--Crossley term can be constrained. Friction, sensing error, and unmodelled dynamics cannot be commanded directly; they motivate empirical tightening and stress tests. Consequently, this paper reports force limitation relative to a configured engineering threshold, not a clinical tissue-damage guarantee.
+
+\subsection{Kalman Disturbance Augmentation}\label{sec:kalman}
+
+The offset-free component inherited from~\cite{cao2026phri} is an integrating force-form disturbance state. For the residual error model \eqref{eq:discrete}, the augmented predictor is
+\begin{equation}
+\begin{bmatrix}x_{e,k+1}\\ \hat d_{k+1}\end{bmatrix}=
+\begin{bmatrix}A_d&B_d\\0&I_3\end{bmatrix}
+\begin{bmatrix}x_{e,k}\\ \hat d_k\end{bmatrix}
++\begin{bmatrix}B_d\\0\end{bmatrix}F_{\mathrm{mpc},k}
++\begin{bmatrix}0\\w_k\end{bmatrix}.
+\label{eq:aug}
+\end{equation}
+The integrating block is the standard internal model for constant force bias and gives zero steady-state error when the residual is bounded and asymptotically constant, with the usual care needed under actuator saturation~\cite{cao2004antiwindup}. In this paper the Kalman state should be read as the unstructured remainder after the planned Hunt--Crossley contact has been accounted for: axial trocar friction, sensing bias, and slowly varying model error. The dead-zone tissue estimator therefore improves the offset-free model indirectly by removing the dominant structured component before it has to be treated as a random walk. In the current v1 code this estimator is used to form diagnostic residuals and the tip-MPC/free-response branch; the reported joint/task QP metrics are dominated by the explicit RLS penetration row and RCM rows rather than by a measured Kalman offset-free gain.
+
+\subsection{Internal Model for Periodic Respiration}\label{sec:osc}
+
+The random-walk disturbance state \eqref{eq:aug} predicts future disturbance as constant. That is adequate for slowly varying contact bias and trocar friction, but respiration is quasi-periodic. The controller therefore keeps the oscillator augmentation of the original design as an optional internal model:
+\begin{equation}
+x_{r,k+1} =
+\begin{bmatrix}
+\cos\omega_r\Delta t & \sin\omega_r\Delta t\\
+-\sin\omega_r\Delta t & \cos\omega_r\Delta t
+\end{bmatrix}x_{r,k}+w_{r,k},
+\label{eq:osc}
+\end{equation}
+with $d_{\mathrm{resp},k}=C_rx_{r,k}$ mapped along the insertion direction. Stacking $\xi=[x_e^\top,\hat d^\top,x_r^\top]^\top$ gives
+\begin{equation}
+\xi_{k+1}=
+\begin{bmatrix}
+A_d & B_d & B_dC_r\\
+0 & I_3 & 0\\
+0 & 0 & R(\omega_r\Delta t)
+\end{bmatrix}\xi_k+
+\begin{bmatrix}B_d\\0\\0\end{bmatrix}F_{\mathrm{mpc},k}+
+\begin{bmatrix}0\\w_k\\w_{r,k}\end{bmatrix}.
+\label{eq:aug_osc}
+\end{equation}
+This augmentation does not increase the QP decision dimension and preserves the constant-$A_d$ residual structure. Its purpose is not to create a new force constraint; it improves horizon free-response prediction when the periodic component is coupled into the predicted residual and is fast enough relative to the horizon. In the current slow-respiration benchmark, Section~\ref{sec:robust} shows that disabling the oscillator has negligible measured effect, so the oscillator is reported as an implemented internal-model option rather than as a headline measured gain.
+
+\subsection{Prediction-Error Growth over the Horizon}\label{sec:validity}
+
+The safety and force rows depend on a finite-horizon prediction. Holding a random-walk disturbance fixed over the horizon is exact only for constant disturbances, so the approximation should be stated explicitly rather than hidden. If the residual disturbance is Lipschitz, $\|\dot d(t)\|_2\le L_d$, and the current estimation error satisfies $\|d_k-\hat d_{k|k}\|_2\le e_K$, then
+\begin{equation}
+\|d_{k+i}-\hat d_{k+i|k}\|_2 \le e_K+L_d\,i\Delta t,\qquad i=0,\ldots,N-1.
+\label{eq:growth}
+\end{equation}
+Thus prediction error grows linearly with horizon depth. A short horizon, receding-horizon re-solving, and the oscillator model all reduce the practical impact: only the first input is applied, and periodic respiration can be removed from $L_d$ when \eqref{eq:osc} is accurate.
+
+\begin{theorem}[Horizon criterion for a linear force budget]\label{thm:horizon}
+For the linear post-feedforward plant with induced-gain bound $\|T_{zw}\|_\infty\le\gamma$, a residual bound $\bar w$, and disturbance growth \eqref{eq:growth}, assume $F_{\max}/\gamma>\bar w$. The nominal force budget $F_{\max}$ is preserved by the horizon prediction if
+\begin{equation}
+N\Delta t \le \frac{F_{\max}/\gamma-\bar w}{L_d}.
+\label{eq:criterion}
+\end{equation}
+\end{theorem}
+
+\begin{IEEEproof}
+At the end of the horizon, the effective residual bound is $\bar w_{\mathrm{eff}}=\bar w+L_dN\Delta t$. Requiring the induced-gain force budget $\gamma\bar w_{\mathrm{eff}}\le F_{\max}$ gives \eqref{eq:criterion}.
+\end{IEEEproof}
+
+\section{Predictive Interaction Dynamics Control}\label{sec:mpc}
+
+The architecture of~\cite{cao2026phri} is inherited in its essential interaction-dynamics structure; this section states what is the same and what is new for laparoscopy.
+
+\subsection{Interaction-Dynamics Normalization}
+
+The Layer-1 torque decomposition of~\cite{cao2026phri} is preserved:
+\begin{equation}
+\tau = \tau_{\text{ff}} + J_v^\top F_{\text{mpc}} + J_\omega^\top F_{\text{orient}} + \bar{N}^\top \tau_{\text{null}},
+\label{eq:torque}
+\end{equation}
+with $\tau_{\text{ff}} = C\dot{q} + G + J_v^\top \Lambda \ddot{p}_d$. After cancellation the residual error dynamics are
+\begin{equation}
+\ddot{e} = -\Lambda^{-1}(q) F_{\text{mpc}} + d_{\text{res}}(t),
+\label{eq:errdyn}
+\end{equation}
+with $d_{\text{res}}$ collecting contact and modelling residuals. This is the configuration-invariant interaction-dynamics backbone of the controller: nonlinear robot dynamics are normalized into a linear residual model whose state matrix is independent of configuration. Exact zero-order-hold discretization gives
+\begin{equation}
+x_{e,k+1} = \underbrace{\begin{bmatrix} I_3 & \Delta t I_3 \\ 0 & I_3 \end{bmatrix}}_{A_d \text{ (constant)}} x_{e,k} + \underbrace{\begin{bmatrix} -\frac12\Lambda^{-1}(q_k)\Delta t^2 \\ -\Lambda^{-1}(q_k) \Delta t \end{bmatrix}}_{B_d(\rho_k)} F_{\text{mpc},k},
+\label{eq:discrete}
+\end{equation}
+with $x_e = [e^\top, \dot{e}^\top]^\top$. The plant is an LPV system with a \emph{constant} state matrix $A_d$ and a parameter-varying input matrix $B_d(\rho_k)$, the only configuration dependence entering through $\Lambda^{-1}(q_k)$; ``constant-$A_d$'' is used throughout as shorthand for this structure. Its value is computational: powers of $A_d$ and the cost weights are fixed, while the local input map $B_d(\rho_k)$, the horizon map $\Gamma$, and therefore the numerical Hessian $H=\Gamma^\top\bar Q\Gamma+\bar R$ are updated for the frozen configuration.
+
+\subsection{Predictive Optimization with Interaction Constraints}\label{sec:qp}
+
+The predictive interaction-dynamics QP extends the tip-force decision with a seven-dimensional auxiliary joint torque,
+\begin{equation}
+u_k=\begin{bmatrix}F_{\text{mpc},k}^\top&\tau_{a,k}^\top\end{bmatrix}^\top\in\mathbb{R}^{10}.
+\label{eq:combinedinput}
+\end{equation}
+This is the implementation change that gives the optimizer direct authority over the RCM. The prediction state is
+\begin{equation}
+x_k=\begin{bmatrix}e_k^\top&\dot e_k^\top&(q_k-q_{\text{home}})^\top&\dot q_k^\top\end{bmatrix}^\top\in\mathbb{R}^{20},
+\end{equation}
+and exact ZOH is applied to both the tip and joint double integrators. With $M^{-1}[J_{\text{tip}}^\top\ I_7]$ mapping $u_k$ to joint acceleration, the joint-position block of $B_d$ contains $\frac12\Delta t^2M^{-1}[J_{\text{tip}}^\top\ I_7]$, while the tip-error block contains its negative projection through $J_{\text{tip}}$. A short horizon $N=5$ is used to keep the 100\,Hz problem small. Stacking the ten-dimensional stage inputs gives $U=[u_k^\top,\ldots,u_{k+N-1}^\top]^\top\in\mathbb{R}^{10N}=\mathbb{R}^{50}$, so $H\in\mathbb{R}^{50\times50}$ and $h\in\mathbb{R}^{50}$.
+\begin{equation}
+\min_U \;\; \tfrac{1}{2} U^\top H U + h^\top U
+\label{eq:qpcost}
+\end{equation}
+subject to, for $k=0,\dots,N-1$,
+\begin{subequations}
+\begin{align}
+&\|F_{\text{mpc},k}\|_\infty\le F_{\max,u}, \label{eq:effort_con}\\
+&\tau_{\min}\le\tau_{\text{ff},k}+
+\begin{bmatrix}J_{\text{tip},k}^\top&I_7\end{bmatrix}u_k
+\le\tau_{\max}, \label{eq:torque_con}\\
+&\|\Phi_{\text{lin},k}\|_\infty\le\varepsilon_{\text{rcm}}, \label{eq:rcm_con}\\
+&\delta_k\le\delta_{\max}(\hat k_e,\hat b). \label{eq:force_con}
+\end{align}
+\end{subequations}
+where $H=\Gamma^\top\bar Q\Gamma+\bar R$ and $h=\Gamma^\top\bar Q\Phi x_k$. The modifications are:
+
+\subsubsection{Effort bounds} separate the Cartesian correction box from the physical actuator box. The virtual Cartesian correction uses $F_{\max,u}=8$\,N. The applied command is
+$\tau=\tau_{\text{ff}}+J_{\text{tip}}^\top F_{\text{mpc}}+\tau_a$, so the QP constrains this \emph{total} command using the FR3 MuJoCo joint-force ranges: $\pm87$\,Nm for joints 1--4 and $\pm12$\,Nm for joints 5--7. Because the short horizon freezes the current local model, the implemented row uses the current $\tau_{\text{ff}}$ and $J_{\text{tip}}$ for all stages; the final applied torque is clipped to the same box as a guard for fallback or inter-sample held commands.
+
+\subsubsection{Predictive RCM rows} use the analytic RCM Jacobian evaluated at the current configuration,
+\begin{equation}
+\Phi_{\text{lin},k+i}=\Phi(q_k)+J_c(q_k)(q_{k+i}-q_k).
+\end{equation}
+The same rows are imposed at every horizon stage. This is a one-point linearization, not the unimplemented successive-convexification scheme of the earlier draft. The configured band is 0.1\,mm; the measured maximum is larger because of curvature, model freezing, and the 10\,ms hold.
+
+\begin{lemma}[RCM linearization error]\label{lem:curv}
+Let $\Phi(\cdot,t_k)$ be twice continuously differentiable on the operating region, with curvature bound $L_\Phi := \sup_q \|\partial^2\Phi/\partial q^2\|_2$, and let the implemented linearization $\Phi_{\emph{lin}}$ be taken about the current configuration $q_k$. If the predicted trajectory satisfies $\|q_{k+i}-q_k\|_2 \le v_q\, i\,\Delta t$, with $v_q$ a bound on the predicted joint speed over the horizon, then
+\begin{equation}
+\big\|\Phi(q_{k+i},t_k)-\Phi_{\emph{lin}}(q_{k+i},t_k)\big\|_2 \;\le\; \tfrac12\, L_\Phi\,(v_q\, i\,\Delta t)^2 .
+\label{eq:curv}
+\end{equation}
+\end{lemma}
+
+\begin{IEEEproof}
+Taylor's theorem with second-order Lagrange remainder, applied componentwise to $\Phi$ about $q_k$: the constant and first-order terms are $\Phi_{\text{lin}}$ and the remainder of each component is bounded by $\tfrac12 L_\Phi\|q_{k+i}-q_k\|_2^2$; substituting the trajectory bound gives \eqref{eq:curv}.
+\end{IEEEproof}
+
+Lemma~\ref{lem:curv} is retained to expose the source of the realized-versus-linearized RCM gap. The present code does not compute $L_\Phi$ online; instead, the RCM-band sweep in Section~\ref{sec:robust} measures the effect of tightening directly. Computing a certified curvature back-off remains a next step.
+
+\subsubsection{Adaptive penetration rows} convert the force threshold into a position-output constraint. Since
+\begin{equation}
+\delta_k=(p_{d,k}-p_{\text{surf},k})^\top\hat n-\hat n^\top e_k,
+\end{equation}
+the row is affine in the predicted state. With empirical tightening $\rho_F=0.33$,
+\begin{equation}
+\delta_{\max}=
+\left[
+\frac{\rho_FF_{\max}}
+{\hat k_e(1+\hat b\max(\dot\delta,0))}
+\right]^{1/n}.
+\label{eq:deltamax}
+\end{equation}
+The tightening was selected after the heterogeneous-tissue sweep exposed overshoot at $k_e=1200\,\mathrm{N/m}^{1.5}$. At that stiffness, varying $\rho_F$ from 0.25 to 0.33 to 0.40 changes the measured peak from 2.39 to 2.90 to 3.28\,N. Thus $\rho_F=0.33$ is an empirical operating margin close to the tested 3\,N threshold, not a theoretically derived or universal clinical constant.
+
+\subsubsection{Terminal treatment and infeasibility} use a scaled terminal state penalty rather than an explicit invariant terminal set. If the joint/task QP does not return a solved status, the controller uses the stable tip-MPC solution plus soft null-space RCM regulation for that update instead of applying zero feedback. An explicit robust terminal set would still be required for the standard recursive-feasibility claim of constrained MPC~\cite{mayne2000} and is not asserted here.
+
+\emph{Prediction chain.} Unlike the earlier tip-only prototype, joint position and velocity are now state variables, so $q_{k+i}$ enters \eqref{eq:rcm_con} directly. No pseudoinverse reconstruction or external redundant increment is needed.
+
+\emph{Feasibility backstop.} A reference may be initialized centimetres inside tissue, making the first local QP infeasible before the receding horizon can retreat. The implementation first projects such a reference to the same estimated penetration set \eqref{eq:deltamax}. The horizon rows remain active; the projection is a fail-safe feasibility backstop, not the sole force-limiting mechanism.
+\subsection{Impedance as the Unconstrained Special Case}
+
+The impedance-equivalence theorem of~\cite{cao2026phri} carries over unchanged when the constraints \eqref{eq:rcm_con}--\eqref{eq:force_con} are inactive: the unconstrained predictive interaction-dynamics optimizer is an affine state feedback $F_{\text{mpc}} = K_{\text{eff}} e + D_{\text{eff}} \dot{e}$ and the closed loop is the classical task-space impedance~\cite{hogan1985}
+\begin{equation}
+\Lambda(q) \ddot{e} + D_{\text{eff}} \dot{e} + K_{\text{eff}} e = -F_{\text{ext}},
+\label{eq:impedance}
+\end{equation}
+with $(K_{\text{eff}}, D_{\text{eff}})$ the unconstrained LQR gains. Impedance is therefore not the main design object; it is the unconstrained realization of the same interaction-dynamics regulator. Prediction adds value where the controller must depart from this static gain---at the RCM, force, or effort constraint boundary, and through the disturbance-augmented free response.
+
+\section{Adaptive Tissue Estimator}\label{sec:tissue}
+
+The Hunt--Crossley parameters $\theta = [k_e, b]^\top$ are unknown and patient-specific. The contact law \eqref{eq:hc} is not linear in $\theta$ but is linear in the lumped vector $\beta = [k_e,\; k_e b]^\top$, since $F_{\text{ext}} = \phi^\top\beta$ with regressor $\phi = [\delta^n,\, \delta^n\dot\delta]^\top$. A dead-zone recursive-least-squares law runs on $\beta$, recovering $k_e=\hat\beta_1$, $b=\hat\beta_2/\hat\beta_1$:
+\begin{align}
+\hat{\beta}_{k+1} &= \hat{\beta}_k + L_k\, r_k \cdot \mathbb{1}\{|r_k| > \delta_0\}, L_k = \frac{\Gamma_k \phi_k}{\alpha + \phi_k^\top \Gamma_k \phi_k}, \label{eq:rls}\\
+\Gamma_{k+1} &= \frac{1}{\alpha}\Big[ \Gamma_k - \frac{\Gamma_k \phi_k \phi_k^\top \Gamma_k}{\alpha + \phi_k^\top \Gamma_k \phi_k} \Big]
+\label{eq:rls_cov}
+\end{align}
+with residual $r_k = F_{\text{ext},k}^{\text{meas}} - \phi_k^\top \hat{\beta}_k$, dead zone $\delta_0$ suppressing adaptation on measurement noise~\cite{iordanou1991}, and forgetting factor $\alpha=0.995$ in all experiments. Projection keeps the recovered $\hat\theta_k$ in a compact box $\Theta$, bounding the parameter error.
+
+\emph{Covariance windup and loss of excitation.} Long static holds and free-space motion drive the regressor energy toward zero; naive forgetting can then inflate $\Gamma_k$ and move $\hat\theta$ on noise. The implementation uses three concrete safeguards: updates are disabled below 1\,mm penetration, residuals inside a 0.05\,N dead zone are ignored, and covariance eigenvalues are clipped to a finite interval. Projection keeps $(\hat k_e,\hat b)$ in the configured parameter box. Test T1 verifies zero no-contact drift and bounded covariance.
+
+The estimator runs at 100\,Hz and its sole deployed role is to calibrate \eqref{eq:deltamax}. The stiffness sweep gives final errors of 5.1\%, 4.7\%, and 7.1\% for true $k_e=200$, 500, and $1200\,\mathrm{N/m}^{1.5}$, respectively.
+
+\section{$H_2/H_\infty$ Interaction Design and Invariance}\label{sec:hinf}
+
+\subsection{Linear Interaction Plant Used for Synthesis}
+
+Interaction-dynamics normalization leaves a linear residual plant at each frozen configuration:
+\begin{equation}
+x_{e,k+1}=A_dx_{e,k}+B_d(\rho_k)\big(F_{\mathrm{mpc},k}+w_k\big),
+\label{eq:genplant}
+\end{equation}
+where $w_k$ is the force-form residual after subtracting the structured Hunt--Crossley prediction. This is the interaction plant for which the offline controller is synthesized. The performance output weights tracking error and applied force,
+\begin{equation}
+z_k=C_zx_{e,k}+D_zF_{\mathrm{mpc},k},
+\end{equation}
+so a bound on the discrete-time system norm $\|T_{zw}\|_\infty$ gives a disturbance-to-applied-force attenuation statement for the local linear model. This does not replace the nonlinear penetration row \eqref{eq:force_con}; it supplies a certified low-level feedback option and a terminal/storage certificate for the linearized residual dynamics.
+
+\subsection{State-Feedback $H_2$ and $H_\infty$ Synthesis}
+
+The $H_2$ design is the discrete LQR solution and gives the linear counterpart of the classical impedance realization. This is distinct from passivity-preserving fixed-impedance $H_\infty$ synthesis~\cite{larby2022}: here the synthesis is performed on the normalized interaction plant and then realized either as a low-level state feedback or as the unconstrained limit of the predictive optimizer. With terminal cost equal to the DARE solution $P_2$, the unconstrained finite-horizon first move equals the infinite-horizon LQR/impedance gain. The current verification gives
+\begin{align}
+\rho(A_d-B_dK_2)&=0.8182,\\
+\|K_{\mathrm{MPC}}-K_2\|_{\max}&=9.78\times10^{-10}.
+\end{align}
+Thus the unconstrained predictive interaction controller remains exactly interpretable as a classical impedance law, while the constraints modify it only when RCM, force, or actuator limits bind.
+
+For the robust design, a common-Lyapunov discrete bounded-real LMI is solved over the operational-space inertia polytope~\cite{boyd1994}. The LMI is written with the signed feedback $F_{\mathrm{mpc}}=\tilde Kx_e$, where $\tilde K=-K$ under the Riccati convention $F_{\mathrm{mpc}}=-Kx_e$. With $X=P^{-1}\succ0$ and $W=\tilde KX$, the per-vertex condition is
+\begin{equation}
+\resizebox{0.98\columnwidth}{!}{$
+\begin{bmatrix}
+-X & (A_dX+B_dW)^\top & 0 & (C_zX+D_zW)^\top\\
+A_dX+B_dW & -X & B_d & 0\\
+0 & B_d^\top & -\gamma I & 0\\
+C_zX+D_zW & 0 & 0 & -\gamma I
+\end{bmatrix}\prec0 .
+$}
+\label{eq:lmi}
+\end{equation}
+Solving one $(X,W,\gamma)$ for all vertices gives a single storage function $V=x^\top Px$ and one signed feedback gain $\tilde K=WX^{-1}$. The v1 script \texttt{lap\_commonP\_sdp.py} uses the same exact-ZOH $B_d=[-\frac12\Lambda^{-1}\Delta t^2;-\Lambda^{-1}\Delta t]$ as the controller. The strict common-$P$ solution gives $\gamma=1.480$ with independently checked LMI maximum eigenvalue $-4.4\times10^{-8}$, maximum spectral radius $0.9936$, and measured frequency-sweep norm $1.1083\le\gamma$ over the inertia scales $\{0.5,1.0,2.0\}$.
+
+\subsection{The MPC as the Constrained Realization}
+
+The synthesized gain defines the controller that the QP realizes when no inequality is active. If $Q_f=P$ is used as the terminal weight, the unconstrained first move is $F_{\mathrm{mpc}}=-Kx_e$; with active RCM, force, or actuator rows, the QP computes the closest feasible deformation of that robust interaction law. This is the reason the $H_2/H_\infty$ design is not a separate controller bolted onto the paper: it supplies the nominal feedback gain, the terminal storage candidate, and the optional 1\,kHz low-level feedback, while the 100\,Hz QP supplies constraint handling. In the current implementation the QP uses a scaled terminal penalty rather than an explicit terminal-set row, so the storage interpretation is a design certificate and future terminal-set construction, not a completed recursive-feasibility proof.
+
+\subsection{Force Safety as a Conditional Invariance Statement}
+
+The LMI certifies the linear induced-gain statement
+\begin{equation}
+\|z\|_2\le\gamma\|w\|_2,\qquad
+\|z\|_\infty\le\|z\|_2.
+\label{eq:gamma_bound}
+\end{equation}
+If the force component of $z$ is normalized and the residual bound is $\|w\|_2\le\bar w$, then a sufficient design budget is
+\begin{equation}
+\gamma\bar w\le F_{\max}.
+\label{eq:budget}
+\end{equation}
+This is conservative because it converts an energy gain to a pointwise bound; a tube or reachable-set treatment could tighten the peak estimate~\cite{mayne2005tube}. It is nevertheless a genuine certificate for the linear closed loop under the stated residual bound. The Riccati design also gives an optional 1\,kHz low-level state-feedback mode, $F_{\mathrm{mpc}}=-Kx_e$ (or $F_{\mathrm{mpc}}=\tilde Kx_e$ in the LMI sign convention), because the online computation is only a matrix multiply; the QP remains the constraint-handling layer at 100\,Hz in the reported simulations.
+
+\begin{proposition}[Design-level force invariance]\label{prop:force_invariance}
+Assume the initial augmented state is feasible for the tightened QP; the RLS projection keeps $\hat\theta_k\in\Theta$; the residual satisfies $\|w\|_2\le\bar w$; \eqref{eq:lmi} holds on the operating polytope with common storage $P$; \eqref{eq:budget} and \eqref{eq:criterion} hold; and the nonlinear RCM/contact linearization errors are bounded by the stated tightening margins. Then the set
+\begin{equation*}
+\mathcal X_f=\{x:x^\top Px\le c\}\cap\mathcal C_{\mathrm{tight}},
+\end{equation*}
+where $\mathcal C_{\mathrm{tight}}$ denotes the tightened RCM, force, and torque rows,
+is positively invariant for the terminal linear feedback, and the QP enforces the predicted force cap pointwise. The realized contact force is bounded by the cap plus the explicitly budgeted margin from estimation error, inter-sample hold, nonlinear contact mismatch, and the conservative $\ell_\infty\le\ell_2$ conversion.
+\end{proposition}
+
+\begin{IEEEproof}[Proof sketch]
+The common-$P$ LMI makes $V=x^\top Px$ decrease for every vertex of the linearized polytope under the terminal feedback and residual bound; by convexity the same storage applies inside the polytope. Intersecting a sublevel set of $V$ with the tightened affine constraints gives a terminal set mapped into itself by the terminal law. Recursive feasibility then keeps the predicted force rows active at every step. The gap between predicted and realized force is the sum of bounded estimation, discretization, and nonlinear-linearization margins, so tightening the cap by that margin yields the stated realized-force statement.
+\end{IEEEproof}
+
+Proposition~\ref{prop:force_invariance} is intentionally conditional. It is the correct way to keep the safety and invariance content without overstating clinical validity: the paper has a computable linear certificate and measured nonlinear simulation evidence, while a full hardware or ex vivo safety certificate still requires validated residual bounds, sensing calibration, and nonlinear reachable-set margins.
+
+\section{Simulation Study}\label{sec:sim}
+
+\subsection{Setup}
+
+The architecture is implemented in MuJoCo~3.6.0 on a 7-DoF Franka FR3 with a 0.30\,m analytical instrument. The trocar is initialized on the home-pose shaft at $p_{\text{rcm}}=[0.307,0,0.440]^\top$\,m, with lateral stiffness $K_w=200$\,N/m and axial Coulomb--viscous friction. The nominal Hunt--Crossley surface uses $k_e=500\,\mathrm{N/m}^{1.5}$, $n=1.5$, $b=0.1$\,s/m, and 3\,mm respiratory motion at 0.2\,Hz. The task approaches the surface, commands 15\,mm penetration, holds, and retracts. A 5\,N lateral load acts from 5--7\,s. No unreported tremor input is included. The online QPs are solved with OSQP~\cite{osqp}. The plant runs at 1\,kHz and the nominal $N=5$ benchmark QP at 100\,Hz. The latency stress test separately requests a solve every plant step and activates the soft-RCM tip-MPC fallback when configured actuator delay exceeds 6\,ms.
+
+The complete implementation contains Layer-1 bias/feedforward compensation, exact-ZOH joint/task prediction, total-command actuator boxes, decision-coupled RCM rows, adaptive penetration rows, deep-reference projection, guarded RLS, the optional oscillator disturbance model, and a tip-MPC/soft-RCM fallback for infeasible or high-delay updates. The $H_2/H_\infty$ gains and common-$P$ certificate are computed offline in \texttt{lap\_hinf\_design.py} and \texttt{lap\_commonP\_sdp.py}; the reported benchmark uses the constrained QP, while the synthesized state-feedback law is available as a 1\,kHz low-level option.
+
+\subsection{Tracking and Disturbance Rejection}
+
+Table~\ref{tab:results} and Fig.~\ref{fig:benchmark} compare position impedance, PID-plus-force regulation, tip-only MPC, and the complete constrained joint/task MPC on the same 12\,s palpation episode.
+
+\begin{table}[!t]
+\caption{Measured Results --- Palpation Through a Compliant Trocar (Respiring Tissue + 5\,N Lateral RCM Load)}
+\label{tab:results}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2.3pt}
+\begin{tabular}{lccccc}
+\toprule
+Controller & \shortstack{Tip RMSE\\(mm)} & \shortstack{SS err.\\(mm)} & \shortstack{RCM dev.\\(mm)} & \shortstack{Resp.\ res.\\(mm)} & \shortstack{Peak $F$\\(N)} \\
+\midrule
+Position impedance & 8.64 & 3.94 & 8.13 & 2.29 & 0.85 \\
+PID + force governor & 8.69 & 4.91 & 8.13 & 2.08 & \textbf{0.78} \\
+Tip-only MPC & 2.55 & 0.64 & 5.53 & 0.56 & 1.19 \\
+\textbf{Joint/task MPC} & \textbf{2.25} & 1.78 & \textbf{0.354} & \textbf{0.59} & 1.18 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{lap_benchmark.png}
+\caption{Palpation benchmark through a compliant, respiring trocar: tip tracking error, insertion depth, tool--tissue force, RCM lateral deviation, diagnostic residual estimate, and summary metrics for the four controllers of Table~\ref{tab:results}.}
+\label{fig:benchmark}
+\end{figure}
+
+The results expose the central tradeoff. Position impedance and PID-plus-force have lower contact peaks because they under-track the insertion command: their tip RMSE is about 8.6--8.7\,mm and their RCM excursion exceeds 8\,mm. The force governor further reduces peak force from 0.85 to 0.78\,N but increases steady-state tracking error. Tip-only MPC improves tracking but leaves a 5.53\,mm RCM excursion. Adding joint authority and RCM rows reduces the maximum to 0.354\,mm, at the cost of larger steady-state tip error than tip-only MPC because the controller must sacrifice tracking to respect RCM and tightened contact limits.
+
+\subsection{Randomized Repeated Trials}\label{sec:mc}
+
+Eight fixed-seed episodes vary tissue stiffness (300--900\,N/m$^{1.5}$), Hunt--Crossley damping, respiration amplitude and frequency, sensor noise and bias, and lateral load (3--7\,N). All controllers receive the same realization for each seed. Figure~\ref{fig:mc} reports mean and sample standard deviation. Joint/task MPC gives $3.08\pm0.93$\,mm tip RMSE, $1.214\pm1.612$\,mm maximum RCM deviation, and $1.34\pm0.25$\,N peak tissue force. One episode activates the infeasibility fallback under the total-torque actuator box, increasing its RCM maximum but preventing divergence. In comparison, PID-plus-force gives $9.57\pm1.17$\,mm RMSE and $8.112\pm1.589$\,mm RCM deviation, while tip-only MPC gives $2.60\pm0.57$\,mm RMSE and $5.557\pm0.582$\,mm RCM deviation.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{lap_monte_carlo.png}
+\caption{Eight randomized episodes with matched realizations across controllers. Bars show means and error bars show sample standard deviations.}
+\label{fig:mc}
+\end{figure}
+
+\subsection{Verification of the New Mechanisms}\label{sec:verify}
+
+Four targeted checks (Fig.~\ref{fig:verify}) confirm the additions.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{lap_verify.png}
+\caption{Verification tests T1--T4: adaptive RLS and no-contact gating; force limitation under a deep reference; decision-coupled versus soft RCM regulation; and adverse sensing with stick--slip friction.}
+\label{fig:verify}
+\end{figure}
+
+\emph{(T1) Adaptive RLS.} At nominal stiffness the estimate converges to $\hat k_e=476.3\,\mathrm{N/m}^{1.5}$ (4.7\% error); during no contact the estimate has zero drift and covariance growth is $\times1.0$. The wider sweep gives 5.1\%, 4.7\%, and 7.1\% final errors at true stiffness 200, 500, and $1200\,\mathrm{N/m}^{1.5}$.
+
+\emph{(T2) Nonclinical feasibility stress test.} The main benchmark uses a 15\,mm command. A separate deliberately unrealistic 6\,cm in-tissue reference tests whether reference projection prevents immediate infeasibility: the QP rows and feasibility backstop hold the peak at 1.46\,N under a configured 3\,N threshold, versus 7.69\,N when the limit is set to 100\,N. This test is not used as evidence of clinical penetration performance.
+
+\emph{(T3) RCM authority.} This targeted mechanism test compares the same MPC tracking law with either decision-coupled RCM rows or the earlier soft null-space RCM term; it is distinct from the position-impedance row in Table~\ref{tab:results}. Under the 5\,N lateral load, the two variants give 0.362 and 3.522\,mm maximum deviation, respectively. Sweeping the configured linearized band from 0.05 to 0.50\,mm gives measured maxima of 2.595, 0.362, 0.559, and 0.856\,mm. The tightest 0.05\,mm case is worse because the total-torque actuator box triggers fallback/infeasibility rather than a more accurate nonlinear RCM trajectory. Because the curvature bound $L_\Phi$ is not computed online, these are empirical constraint results rather than a formal nonlinear guarantee.
+
+\emph{(T4) Sensor robustness.} Gaussian force noise ($\sigma_F=0.1$\,N), 0.05\,N bias, and 4\,N stick--slip breakaway force give a 1.43\,N peak and $\hat k_e=518.5\,\mathrm{N/m}^{1.5}$. The dead zone and projection prevent estimator divergence, although the sensing model remains analytical.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{lap_sweep.png}
+\caption{Multi-condition verification: tissue-stiffness estimation, configured force-threshold sweep, empirical $\rho_F$ sensitivity, and RCM-band tightening.}
+\label{fig:sweep}
+\end{figure}
+
+\subsection{Offline $H_2/H_\infty$ Design, Computed}\label{sec:hinfnum}
+
+The linear design of Section~\ref{sec:hinf} is solved by two reproducibility scripts. First, \texttt{lap\_hinf\_design.py} verifies the nominal $H_2$ result: the closed-loop spectral radius is 0.8182, and the unconstrained MPC first-move gain with terminal cost $P_2$ matches the infinite-horizon LQR gain to $9.78\times10^{-10}$. The same script gives a local $H_\infty$ minimum $\gamma=1.0081$; the minimum is marginally stabilizing, so the deployable Riccati gain uses a $1.5\times$ margin, $\gamma=1.5122$, with spectral radius 0.9728. Second, \texttt{lap\_commonP\_sdp.py} solves the common-storage LMI \eqref{eq:lmi}. It certifies $\gamma=1.480$ over inertia scales $\{0.5,1.0,2.0\}$, with strict residual $-4.4\times10^{-8}$, maximum closed-loop spectral radius 0.9936, and direct frequency-sweep norm 1.1083. This restores the v0 claim in corrected form: the common-$P$ result is a genuine linear certificate for the post-feedforward residual plant, while nonlinear contact and sensing margins remain outside the certificate.
+
+\subsection{Robustness Stress Tests}\label{sec:robust}
+
+Three measured stress tests probe oscillator sensitivity, latency, and trocar-model sensitivity (Fig.~\ref{fig:experiments}).
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{lap_experiments.png}
+\caption{Measured robustness stress tests: oscillator/frequency mismatch (A), high-rate control with delay fallback (B), and trocar deadzone with stick-slip friction (C).}
+\label{fig:experiments}
+\end{figure}
+
+\emph{A. Respiration oscillator.} The oscillator is implemented and tested by setting the true respiration frequency to 0.25\,Hz, disabling the oscillator, or detuning its assumed frequency by $\pm20\%$ (Table~\ref{tab:detune}). In this slow-motion task, all four cases give the same measured residual and RMSE to three decimals. This does not invalidate the oscillator; it shows that the random-walk disturbance state is already sufficient for the present 0.25\,Hz benchmark. The oscillator remains useful as an internal-model option for faster periodic motion or longer horizons, where the flat random-walk prediction would otherwise increase the $L_d$ term in \eqref{eq:criterion}.
+
+\begin{table}[!t]
+\caption{Respiration-Oscillator Sensitivity}
+\label{tab:detune}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.0pt}
+\begin{tabular}{lcccc}
+\toprule
+Estimator & no osc. & osc. $-20\%$ & matched & osc. $+20\%$ \\
+\midrule
+Resp.\ residual (mm) & 0.745 & 0.745 & 0.745 & 0.745\\
+Tip RMSE (mm) & 2.310 & 2.310 & 2.310 & 2.310\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{B. Control latency.} The original 100\,Hz sample-and-hold realization became unstable because a 5\,ms actuator delay consumed half of its update period, so stale high-authority RCM corrections were applied after the state had changed. The corrected supervisor requests a QP update every 1\,ms. It retains constrained joint/task control through the verified 5\,ms case and switches above a 6\,ms configured threshold to the delay-tolerant tip MPC with soft null-space RCM regulation (Table~\ref{tab:latency}).
+
+\begin{table}[!t]
+\caption{Control-Latency Sensitivity}
+\label{tab:latency}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{lcccc}
+\toprule
+Loop latency & 0\,ms & 5\,ms & 10\,ms & 20\,ms \\
+\midrule
+Tip RMSE (mm)   & 2.41 & 2.52 & 2.79 & 3.25 \\
+Peak tip error (mm) & 5.05 & 5.15 & 5.81 & 5.91 \\
+Max RCM dev.\ (mm) & 0.347 & 0.519 & 5.673 & 6.035 \\
+Control branch & joint/task & joint/task & fallback & fallback \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No delayed run diverges after this correction. The 5\,ms case increases tip RMSE from 2.41 to 2.52\,mm and maximum RCM deviation from 0.347 to 0.519\,mm, but remains inside the sub-millimetre regime. The important tradeoff is explicit: the 5\,ms case preserves constrained joint/task control, whereas the 10--20\,ms fallback cases remain stable but permit 5.7--6.0\,mm RCM deviation. The switch is therefore a stability backstop, not a replacement for delay-aware constrained MPC or a hardware RCM guarantee. The 1\,kHz request rate is evaluated in simulation and must still be validated against worst-case hardware computation and communication timing.
+
+\emph{C. Trocar deadzone and friction.} Adding a radial port clearance to the compliant trocar, with axial Coulomb--viscous friction always present (Table~\ref{tab:deadzone}).
+
+\begin{table}[!t]
+\caption{Trocar Deadzone and Friction}
+\label{tab:deadzone}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccc}
+\toprule
+Radial clearance & 0\,mm & 1\,mm & 2\,mm \\
+\midrule
+Max RCM dev.\ (mm) & 0.351 & 0.349 & 0.349 \\
+SS tip error (mm) & 0.227 & 0.221 & 0.221 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The analytical radial clearance has little influence on RCM deviation or steady-state tip error in this task. This shows robustness to the tested port model, but not to geometric backlash or deformable-trocar dynamics absent from the simulator.
+
+\section{Discussion}\label{sec:discussion}
+
+\emph{Positioning.} The pHRI architecture~\cite{cao2026phri} supplies the interaction-dynamics normalization, constant-$A_d$ tip model, and impedance interpretation. The laparoscopic contribution is the implemented joint/task lifting that puts tool--trocar and tool--tissue interaction constraints in the same online optimization, plus the retained oscillator and $H_2/H_\infty$ synthesis path for the linear residual plant. The paper therefore has two kinds of evidence: a formal linear certificate for the normalized interaction model and measured nonlinear simulation evidence for the deployed constrained QP.
+
+\emph{Prediction validity and invariance.} Lemma~\ref{lem:curv} identifies the curvature term between linearized and realized RCM motion, while Theorem~\ref{thm:horizon} identifies the disturbance-prediction term that grows with horizon length. Proposition~\ref{prop:force_invariance} gives the correct conditional invariance statement: with validated residual bounds, tightened rows, and the common-$P$ terminal storage, the linear terminal set is positively invariant and the predicted force cap is pointwise. What is still missing is not the safety/invariance concept, but a fully quantified nonlinear margin $\Delta$ for hardware or ex vivo tissue.
+
+\emph{Limitations.} (i)~The Hunt--Crossley planar contact law omits hysteresis, cutting, curved sliding, and tissue damage. (ii)~The delay supervisor preserves stability through 20\,ms only by relinquishing hard RCM performance above 6\,ms; its 1\,kHz solve request and switching logic are not yet hardware-certified. (iii)~The total-torque actuator box is now represented, but tight RCM bands can still trigger fallback and degrade realized RCM accuracy. (iv)~The $H_\infty$ certificate is for the linear post-feedforward residual plant and bounded residual channel; nonlinear contact and sensing margins still require validation before clinical safety language. (v)~The 0.33 tightening factor is empirical and the 0.40 sensitivity case exceeds the configured threshold. (vi)~The simulator uses analytical instrument, trocar, force, and sensing models rather than an integrated surgical robot model. (vii)~The baseline set now includes PID-plus-force but still lacks a constraint-matched MPVIC implementation. (viii)~The repeated trials cover eight simulated parameter realizations, not ex vivo or hardware variability.
+
+\emph{Future work.} The immediate priorities are a delay-augmented constrained predictor with a certified switching set, an explicit numerical terminal set using the common-$P$ storage, and a curved heterogeneous contact task with flange-to-tip wrench reconstruction. The benchmark should then add unmodified pHRI and constraint-matched MPVIC baselines. Ex vivo validation must precede any clinical safety interpretation.
+
+\section{Conclusion}\label{sec:conclusion}
+
+This paper formulated robot-assisted laparoscopy as a predictive interaction-dynamics problem rather than as a standalone impedance-control problem. The resulting framework normalizes the nonlinear manipulator into a configuration-invariant residual interaction model, then uses a joint/task predictive optimizer to regulate tool-tip motion, tool--trocar RCM consistency, actuator authority, and adaptive tool--tissue penetration constraints in one decision. In the nominal 15\,mm palpation task, maximum RCM deviation is 0.354\,mm versus 8.13\,mm for position impedance and 5.53\,mm for tip-only MPC. Across eight randomized episodes, joint/task predictive control gives $3.08\pm0.93$\,mm tip RMSE and $1.214\pm1.612$\,mm maximum RCM deviation. The common-$P$ LMI certifies a linear disturbance-to-applied-force bound with $\gamma=1.480$ over the tested inertia polytope, and the synthesized feedback can run as a 1\,kHz low-level option. A high-rate supervisor keeps the 5\,ms delayed constrained case stable and uses a soft-RCM fallback to prevent divergence at 10--20\,ms, with the resulting RCM-performance loss reported explicitly.
+
+Although demonstrated on robotic laparoscopy, the formulation is not tied to a specific surgical task. Because the interaction dynamics are represented by a configuration-invariant predictive model, the same framework naturally extends to physical human--robot interaction, constrained manipulation, robotic assembly, rehabilitation, and other contact-rich robotic systems. These are simulation and linear-design results, not a clinical guarantee; nonlinear margin certification and ex vivo validation remain future work.
+
+\begin{thebibliography}{18}
+\fontsize{7.5}{8.2}\selectfont
+\setlength{\itemsep}{0pt}
+
+\bibitem{cao2026phri}
+Y.~Cao and J.~Tang, ``Impedance MPC for physical human--robot interaction: Predictive disturbance rejection with joint-limit safety,'' arXiv:2606.08281, Jun. 2026.
+
+\bibitem{roveda2025}
+L.~Roveda \emph{et al.}, ``Model predictive variable impedance control towards safe robotic interaction in unknown disturbance-rich environments,'' \emph{Robot. Auton. Syst.}, 2025.
+
+\bibitem{anand2022}
+A.~S. Anand \emph{et al.}, ``Deep model predictive variable impedance control,'' arXiv:2209.09614, 2022.
+
+\bibitem{larby2022}
+D.~Larby and F.~Forni, ``A passivity preserving $H_\infty$ synthesis technique for robot control,'' in \emph{Proc. IEEE Conf. Decis. Control (CDC)}, 2022.
+
+\bibitem{pannocchia2003}
+G.~Pannocchia and J.~B. Rawlings, ``Disturbance models for offset-free model-predictive control,'' \emph{AIChE J.}, vol.~49, no.~2, pp. 426--437, Feb. 2003.
+
+\bibitem{cao2004antiwindup}
+Y.-Y. Cao, Z.~Lin, and D.~G. Ward, ``Anti-windup design of output tracking systems subject to actuator saturation and constant disturbances,'' \emph{Automatica}, vol.~40, no.~7, pp. 1221--1228, Jul. 2004.
+
+\bibitem{hogan1985}
+N.~Hogan, ``Impedance control: An approach to manipulation, Parts I--III,'' \emph{ASME J. Dyn. Syst. Meas. Control}, vol.~107, no.~1, pp. 1--24, Mar. 1985.
+
+\bibitem{khatib1987}
+O.~Khatib, ``A unified approach for motion and force control of robot manipulators: The operational space formulation,'' \emph{IEEE J. Robot. Autom.}, vol.~3, no.~1, pp. 43--53, Feb. 1987.
+
+\bibitem{hunt1975}
+K.~H. Hunt and F.~R.~E. Crossley, ``Coefficient of restitution interpreted as damping in vibroimpact,'' \emph{ASME J. Appl. Mech.}, vol.~42, no.~2, pp. 440--445, Jun. 1975.
+
+\bibitem{diolaiti2005}
+N.~Diolaiti, C.~Melchiorri, and S.~Stramigioli, ``Contact impedance estimation for robotic systems,'' \emph{IEEE Trans. Robot.}, vol.~21, no.~5, pp. 925--935, Oct. 2005.
+
+\bibitem{aghakhani2013}
+N.~Aghakhani, M.~Geravand, N.~Shahriari, M.~Vendittelli, and G.~Oriolo, ``Task control with remote center of motion constraint for minimally invasive robotic surgery,'' in \emph{Proc. IEEE Int. Conf. Robot. Autom. (ICRA)}, 2013, pp. 5807--5812.
+
+\bibitem{sandoval2018}
+J.~Sandoval, G.~Poisson, and P.~Vieyres, ``A new kinematic formulation of the RCM constraint for redundant torque-controlled robots,'' \emph{Mechatronics}, 2018.
+
+\bibitem{mayne2000}
+D.~Q. Mayne, J.~B. Rawlings, C.~V. Rao, and P.~O.~M. Scokaert, ``Constrained model predictive control: Stability and optimality,'' \emph{Automatica}, vol.~36, no.~6, pp. 789--814, Jun. 2000.
+
+\bibitem{mayne2005tube}
+D.~Q. Mayne, M.~M. Seron, and S.~V. Rakovi\'{c}, ``Robust model predictive control of constrained linear systems with bounded disturbances,'' \emph{Automatica}, vol.~41, no.~2, pp. 219--224, Feb. 2005.
+
+\bibitem{rawlings2017}
+J.~B. Rawlings, D.~Q. Mayne, and M.~Diehl, \emph{Model Predictive Control: Theory, Computation, and Design}, 2nd~ed. Madison, WI: Nob Hill Publishing, 2017.
+
+\bibitem{iordanou1991}
+B.~B. Peterson and K.~S. Narendra, ``Bounded error adaptive control,'' \emph{IEEE Trans. Autom. Control}, vol.~27, no.~6, pp. 1161--1168, Dec. 1982.
+
+\bibitem{boyd1994}
+S.~Boyd, L.~El Ghaoui, E.~Feron, and V.~Balakrishnan, \emph{Linear Matrix Inequalities in System and Control Theory}. SIAM, 1994.
+
+\bibitem{osqp}
+B.~Stellato, G.~Banjac, P.~Goulart, A.~Bemporad, and S.~Boyd, ``OSQP: An operator splitting solver for quadratic programs,'' \emph{Math. Program. Comput.}, vol.~12, no.~4, pp. 637--672, 2020.
+
+\end{thebibliography}
