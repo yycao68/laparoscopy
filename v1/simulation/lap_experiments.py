@@ -3,8 +3,9 @@ Robustness stress tests for the deployed controller:
 
   A. Control latency
      The applied torque is delayed by 0..20 ms.  The revised supervisor
-     re-solves the QP at 1 kHz and, above the verified constrained-controller
-     delay margin, falls back to delay-tolerant tip MPC with soft RCM control.
+      re-solves the QP at 1 kHz and, above the verified 4 ms
+      constrained-controller delay margin, falls back to delay-tolerant tip MPC
+      with soft RCM control.
 
   B. Trocar radial deadzone + friction
      A radial port clearance (deadzone) is added to the trocar; checks that the
@@ -53,7 +54,7 @@ def simulate(true_resp_f=0.20, ctrl_resp_f=0.20, use_oscillator=True,
     buf = None
 
     log = {k: [] for k in ("t", "tip_err", "tip_s", "ref_s", "F_tissue",
-                           "rcm", "wall_F", "d_hat", "qp_ms", "tau_norm",
+                           "rcm", "wall_F", "d_hat", "qp_ms", "control_ms", "tau_norm",
                            "force_cmd", "tau_aux")}
     for k in range(n_steps):
         t = k * dt
@@ -89,6 +90,7 @@ def simulate(true_resp_f=0.20, ctrl_resp_f=0.20, use_oscillator=True,
         log["tau_aux"].append(float(np.linalg.norm(info["tau_aux"])))
         if resolve and mode not in ("impedance", "pid_force"):
             log["qp_ms"].append(float(info["qp_ms"]))
+            log["control_ms"].append(float(info["control_ms"]))
         env.step()
     return {k: np.asarray(v) for k, v in log.items()}
 
@@ -128,7 +130,7 @@ def exp_B():
                                      peak_tip_mm=float(np.max(L["tip_err"])),
                                      max_rcm_mm=m["max_rcm_mm"],
                                      controller=("constrained joint/task"
-                                                 if lat <= 6.0
+                                                 if lat <= 4.0
                                                  else "tip-MPC fallback"))
     return rows
 
@@ -147,9 +149,11 @@ def exp_C():
 
 def main():
     A, B, C = exp_A(), exp_B(), exp_C()
+    (Path(__file__).parent / "lap_experiments.json").write_text(
+        json.dumps({"A": A, "B": B, "C": C}, indent=2))
 
     print("\n== Exp A: respiration oscillator / frequency mismatch ==")
-    print(f"{'estimator':<24}{'respσ':>10}{'tip RMSE':>12}")
+    print(f"{'estimator':<24}{'resp std':>10}{'tip RMSE':>12}")
     for k, v in A.items():
         print(f"{k:<24}{v['resp_resid_mm']:>10.3f}{v['tip_rmse_mm']:>12.3f}")
 
@@ -205,8 +209,6 @@ def main():
     out = Path(__file__).parent / "lap_experiments.png"
     fig.savefig(out, dpi=150)
     print(f"\n[plot] saved -> {out}")
-    (Path(__file__).parent / "lap_experiments.json").write_text(
-        json.dumps({"A": A, "B": B, "C": C}, indent=2))
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import t as student_t
 
 from lap_benchmark import (
     DT_DECIM,
@@ -61,7 +62,8 @@ def run(mode: str, cfg: dict[str, float], seed: int):
     env.sensor_sigma = cfg["sensor_sigma"]
     env.sensor_bias = cfg["sensor_bias"]
     env.rng = np.random.default_rng(seed)
-    ctrl = LapController(mode, env, LapCtrlParams())
+    params = LapCtrlParams()
+    ctrl = LapController(mode, env, params)
     dt = env.dt
     u_lat = lateral_axis(env.s0)
     R_d = env.R0
@@ -77,8 +79,13 @@ def run(mode: str, cfg: dict[str, float], seed: int):
             "wall_F",
             "d_hat",
             "qp_ms",
+            "control_ms",
         )
     }
+    qp_status_counts: dict[str, int] = {}
+    qp_fallback_count = 0
+    torque_saturation_steps = 0
+    force_violation_steps = 0
     for k in range(int(T_END / dt)):
         t = k * dt
         dyn, st = env.get_dynamics_and_state()
@@ -87,9 +94,15 @@ def run(mode: str, cfg: dict[str, float], seed: int):
         tau, info = ctrl.control(
             dyn, st, p_d, dp_d, ddp_d, R_d, env.p_rcm0, resolve=resolve
         )
+        torque_saturation_steps += int(info["tau_saturated"])
+        if resolve and mode not in ("impedance", "pid_force"):
+            status = str(info["qp_status"])
+            qp_status_counts[status] = qp_status_counts.get(status, 0) + 1
+            qp_fallback_count += int(info["qp_fallback"])
         env.apply_torque(tau)
         p_tip, _, v_tip, _ = env.tip_state(dyn, st)
         F_tis, _ = env.tissue_force(p_tip, v_tip, t)
+        force_violation_steps += int(np.linalg.norm(F_tis) > params.F_tissue_max)
         env.apply_point_force(st, F_tis, p_tip)
         F_tro, e_rcm = env.trocar_force(st, env.p_rcm0)
         env.apply_point_force(st, F_tro, env.p_rcm0)
@@ -105,29 +118,75 @@ def run(mode: str, cfg: dict[str, float], seed: int):
         log["d_hat"].append(float(np.linalg.norm(info["d_hat"])))
         if resolve and mode not in ("impedance", "pid_force"):
             log["qp_ms"].append(float(info["qp_ms"]))
+            log["control_ms"].append(float(info["control_ms"]))
         env.step()
-    return metrics({key: np.asarray(value) for key, value in log.items()})
+    result = metrics({key: np.asarray(value) for key, value in log.items()})
+    result.update(
+        seed=seed,
+        qp_status_counts=qp_status_counts,
+        qp_fallback_count=qp_fallback_count,
+        torque_saturation_steps=torque_saturation_steps,
+        force_violation_steps=force_violation_steps,
+    )
+    return result
 
 
 def summarize(values):
     array = np.asarray(values, dtype=float)
-    return {"mean": float(np.mean(array)), "std": float(np.std(array, ddof=1))}
+    mean = float(np.mean(array))
+    std = float(np.std(array, ddof=1))
+    half_width = float(student_t.ppf(0.975, len(array) - 1) * std / np.sqrt(len(array)))
+    return {
+        "mean": mean,
+        "std": std,
+        "ci95": [mean - half_width, mean + half_width],
+        "min": float(np.min(array)),
+        "max": float(np.max(array)),
+    }
 
 
 def main():
-    raw = {name: [] for name in MODES}
-    scenarios = []
+    checkpoint = Path(__file__).with_name("lap_monte_carlo_checkpoint.json")
+    if checkpoint.exists():
+        saved = json.loads(checkpoint.read_text())
+        raw = saved["raw_per_seed"]
+        scenarios = saved["scenarios"]
+    else:
+        raw = {name: [] for name in MODES}
+        scenarios = []
     for seed in range(N_SEEDS):
         cfg = scenario(seed)
-        scenarios.append(cfg)
+        if seed == len(scenarios):
+            scenarios.append(cfg)
         for name, mode in MODES.items():
+            if len(raw[name]) > seed:
+                continue
             raw[name].append(run(mode, cfg, seed))
+            checkpoint.write_text(
+                json.dumps(
+                    {"scenarios": scenarios, "raw_per_seed": raw},
+                    indent=2,
+                )
+            )
 
     keys = ("tip_rmse_mm", "ss_err_mm", "peak_tissue_N", "max_rcm_mm")
     summary = {
         name: {key: summarize([row[key] for row in rows]) for key in keys}
         for name, rows in raw.items()
     }
+    for name, rows in raw.items():
+        summary[name]["tail"] = {
+            "rcm_over_0p5_mm_episodes": sum(
+                row["max_rcm_mm"] > 0.5 for row in rows
+            ),
+            "force_over_3N_episodes": sum(
+                row["peak_tissue_N"] > 3.0 for row in rows
+            ),
+            "qp_fallback_count": sum(row["qp_fallback_count"] for row in rows),
+            "torque_saturation_steps": sum(
+                row["torque_saturation_steps"] for row in rows
+            ),
+        }
     print("\nRandomized benchmark, mean +/- sample standard deviation")
     for name, values in summary.items():
         print(
@@ -135,6 +194,12 @@ def main():
             f" RMSE {values['tip_rmse_mm']['mean']:.2f}+/-{values['tip_rmse_mm']['std']:.2f}"
             f" RCM {values['max_rcm_mm']['mean']:.3f}+/-{values['max_rcm_mm']['std']:.3f}"
             f" peakF {values['peak_tissue_N']['mean']:.2f}+/-{values['peak_tissue_N']['std']:.2f}"
+        )
+        print(
+            f"{'':24} max RCM {values['max_rcm_mm']['max']:.3f}, "
+            f"RCM>0.5 mm episodes {values['tail']['rcm_over_0p5_mm_episodes']}, "
+            f"force>3 N episodes {values['tail']['force_over_3N_episodes']}, "
+            f"QP fallbacks {values['tail']['qp_fallback_count']}"
         )
 
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.8))
@@ -156,10 +221,16 @@ def main():
     fig.savefig(out, dpi=170)
     Path(__file__).with_suffix(".json").write_text(
         json.dumps(
-            {"n_seeds": N_SEEDS, "scenarios": scenarios, "summary": summary},
+            {
+                "n_seeds": N_SEEDS,
+                "scenarios": scenarios,
+                "raw_per_seed": raw,
+                "summary": summary,
+            },
             indent=2,
         )
     )
+    checkpoint.unlink()
     print(f"[plot] saved -> {out}")
 
 

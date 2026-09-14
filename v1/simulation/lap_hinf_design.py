@@ -32,10 +32,6 @@ import numpy as np
 from numpy.linalg import inv, eigvals
 from scipy.linalg import solve_discrete_are
 
-sys.path.insert(0, str(Path(__file__).parent))
-from lap_env import LapEnv
-from lap_controller import LapController, LapCtrlParams
-
 
 # ----------------------------------------------------------------------
 def tip_plant(env, params):
@@ -118,7 +114,7 @@ def hinf_riccati(A, B, E, Q, R, gamma, iters=20000, tol=1e-10):
         if np.max(np.abs(Xn - X)) < tol:
             return Xn, True
         X = Xn
-    return X, True       # converged slowly but bounded
+    return None, False
 
 
 def _hinf_gain(A, B, E, X, R, gamma):
@@ -159,6 +155,10 @@ def hinf_design(A, B, E, Q, R, gamma_hi=1e4, bisect=60):
 
 # ----------------------------------------------------------------------
 def main():
+    sys.path.insert(0, str(Path(__file__).parent))
+    from lap_env import LapEnv
+    from lap_controller import LapCtrlParams
+
     env = LapEnv()
     p = LapCtrlParams()
     A, B, Lam_inv = tip_plant(env, p)

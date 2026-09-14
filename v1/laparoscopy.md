@@ -3,8 +3,9 @@
 > **Superseded draft.** This markdown file is an older working draft and still
 > contains pre-v1 projected claims. The maintained v1 manuscript is
 > `paper/body.tex`, with build targets `paper/laparoscopy_ieee.tex` and
-> `paper/laparoscopy_arxiv.tex`. Use the paper version for current claims,
-> simulations, H-infinity/common-P certification, and final PDFs.
+> `paper/laparoscopy_arxiv.tex`. Numerical values in this draft and the stored
+> outputs predate the current controller and are not current evidence. Use the
+> paper version for the maintained method and regeneration status.
 
 ## Abstract
 

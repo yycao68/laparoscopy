@@ -2,8 +2,9 @@
 
 > **已被取代的草稿。** 本 markdown 文件是较早工作稿，仍包含 v1 之前的
 > 预测性表述。当前维护的 v1 论文为 `paper/body.tex`，构建入口为
-> `paper/laparoscopy_ieee.tex` 与 `paper/laparoscopy_arxiv.tex`。当前声明、
-> 仿真结果、H-infinity/common-P 认证与最终 PDF 应以 paper 版本为准。
+> `paper/laparoscopy_ieee.tex` 与 `paper/laparoscopy_arxiv.tex`。本草稿与已存
+> 输出中的数值早于当前控制器，不能作为当前证据；维护中的方法与重新生成
+> 状态以 paper 版本为准。
 
 ## 摘要
 

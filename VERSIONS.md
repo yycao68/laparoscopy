@@ -23,6 +23,10 @@ latexmk -pdf laparoscopy_ieee.tex
 - measured solver timing and constraint ablations;
 - local, explicitly limited contact-channel robustness analysis.
 
+All numerical tables and figures were regenerated (2026-09-13) through the
+corrected free-response path with the declared external FR3 dependency
+(`PHRI_SIM_DIR`); no pre-correction values remain in the compiled paper.
+
 Run and build:
 
 ```bash

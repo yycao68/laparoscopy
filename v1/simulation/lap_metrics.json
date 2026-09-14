@@ -7,36 +7,44 @@
     "peak_wall_N": 1.6250314074827805,
     "resp_resid_mm": 2.2922595439967437,
     "qp_median_ms": 0.0,
-    "qp_p95_ms": 0.0
+    "qp_p95_ms": 0.0,
+    "control_median_ms": 0.0,
+    "control_p95_ms": 0.0
   },
   "PID + force governor": {
     "tip_rmse_mm": 8.692359812915521,
-    "ss_err_mm": 4.905274625529379,
+    "ss_err_mm": 4.905274625529377,
     "peak_tissue_N": 0.7843923364619072,
     "max_rcm_mm": 8.125157037413903,
     "peak_wall_N": 1.6250314074827805,
     "resp_resid_mm": 2.082961393636678,
     "qp_median_ms": 0.0,
-    "qp_p95_ms": 0.0
+    "qp_p95_ms": 0.0,
+    "control_median_ms": 0.0,
+    "control_p95_ms": 0.0
   },
   "Tip-only MPC": {
-    "tip_rmse_mm": 2.5535182375353846,
-    "ss_err_mm": 0.6362014988712659,
+    "tip_rmse_mm": 2.5535182375353833,
+    "ss_err_mm": 0.6362014988713878,
     "peak_tissue_N": 1.1886083896133746,
     "max_rcm_mm": 5.530539748010028,
     "peak_wall_N": 1.1061079496020054,
-    "resp_resid_mm": 0.5566789645279602,
-    "qp_median_ms": 0.09522947948426008,
-    "qp_p95_ms": 0.13292321236804128
+    "resp_resid_mm": 0.5566789645279624,
+    "qp_median_ms": 0.0881875166669488,
+    "qp_p95_ms": 0.11429312289692461,
+    "control_median_ms": 0.2599380095489323,
+    "control_p95_ms": 0.3226847038604319
   },
   "Constrained joint/task MPC": {
-    "tip_rmse_mm": 2.249187776350523,
-    "ss_err_mm": 1.7846748862631183,
-    "peak_tissue_N": 1.177150934300368,
-    "max_rcm_mm": 0.3539726360661832,
-    "peak_wall_N": 0.07079452721323663,
-    "resp_resid_mm": 0.5889212378591212,
-    "qp_median_ms": 0.4574584309011698,
-    "qp_p95_ms": 0.5405856529250741
+    "tip_rmse_mm": 1.7133127010406273,
+    "ss_err_mm": 1.4142183946689308,
+    "peak_tissue_N": 1.191003229016729,
+    "max_rcm_mm": 0.5903988072512059,
+    "peak_wall_N": 0.11807976145024117,
+    "resp_resid_mm": 0.3707616695871149,
+    "qp_median_ms": 0.579124956857413,
+    "qp_p95_ms": 1.6063110204413533,
+    "control_median_ms": 1.00079202093184,
+    "control_p95_ms": 2.0443646470084778
   }
 }

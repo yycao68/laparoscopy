@@ -1,5 +1,14 @@
 # Math and number audit for laparoscopy v1
 
+> **Historical artifact warning (updated 2026-09-11).** This file records the
+> 2026-06-25 outputs. The oscillator experiment was later found to be a no-op
+> for the deployed joint/task branch, and the 0.45 ms timing covered OSQP only.
+> The controller and reporting harness have since been corrected, but the
+> external `pHRI/simulation` source is unavailable in this checkout, so the
+> controller-dependent and linear-design artifacts have not been regenerated.
+> The values below are historical provenance, not current evidence. Current
+> claims and regeneration status are maintained in `body.tex`.
+
 Date: 2026-06-25
 
 Scope: `laparoscopy/v1/paper/body.tex` checked against the v1 simulation and

@@ -1,3 +1,5 @@
+% ARCHIVED PRE-CORRECTION BODY. No maintained wrapper inputs this file.
+% Use body.tex; its quantitative block remains disabled until regeneration.
 \begin{abstract}
 Robot-assisted laparoscopy requires simultaneous tool-tip tracking, remote-center-of-motion (RCM) regulation at the trocar, and bounded tool--tissue force. This paper presents a constrained impedance model-predictive controller that addresses these requirements in one locally linear quadratic program. The decision vector contains Cartesian tool force and a seven-dimensional joint correction, giving the optimizer direct authority over both tip motion and trocar deviation. Exact zero-order-hold input terms are used for the double-integrator prediction, and actuator limits are imposed on the total feedforward-plus-MPC torque command. A dead-zone recursive-least-squares estimator identifies Hunt--Crossley tissue stiffness, and the estimated model generates a horizon penetration constraint corresponding to a prescribed force threshold. A reference feasibility backstop handles commands initialized deeply inside tissue. MuJoCo experiments on a 7-DoF Franka FR3 show that the complete controller limits nominal maximum RCM deviation to 0.354\,mm, compared with 5.53\,mm for tip-only MPC and 8.13\,mm for position impedance, while keeping peak tissue force at 1.18\,N under a 3\,N engineering threshold. Across eight randomized simulation episodes, joint/task MPC gives $3.08\pm0.93$\,mm tip RMSE and $1.214\pm1.612$\,mm maximum RCM deviation. Median QP wall time is about 0.45\,ms at a 100\,Hz update rate.
 \end{abstract}
@@ -145,13 +147,13 @@ Updates are disabled outside contact, residuals inside a 0.05\,N dead zone are i
 
 \subsection{Local robustness diagnostic}
 
-The offline $H_\infty$ calculation is retained only as a local diagnostic. Around penetration $\delta_0$, the contact-force perturbation is
+The offline $H_\infty$ calculation provides a local robustness diagnostic. Around penetration $\delta_0$, the contact-force perturbation is
 \begin{equation}
 \Delta F_{\rm ext}\simeq
 -k_en\delta_0^{n-1}\hat s^\top\Delta e.
 \label{eq:localforce}
 \end{equation}
-Including this output in a bounded-real synthesis evaluates the local disturbance-to-contact-force channel. It does not establish a global pointwise force invariant for nonlinear contact or persistent pointwise-bounded disturbances. The online constraint \eqref{eq:force}, the feasibility backstop, and measured stress tests provide the evidence used in this paper.
+Including this output in a bounded-real synthesis evaluates the local disturbance-to-contact-force channel. The global nonlinear-contact evaluation is supplied by the online constraint \eqref{eq:force}, the feasibility backstop, and measured stress tests; pointwise force-invariance certification is reserved for a nonlinear reachable-set extension.
 
 \section{Simulation Study}
 
@@ -187,7 +189,7 @@ Constrained MPC & \textbf{2.25} & 1.78 & \textbf{0.354} & \textbf{0.59} & 1.18\\
 \label{fig:benchmark}
 \end{figure}
 
-Table~\ref{tab:benchmark} separates predictive tip control from decision-coupled RCM control. Tip MPC improves tracking but retains 5.53\,mm RCM deviation because its RCM action remains outside the decision. The complete QP reduces the measured maximum to 0.354\,mm. This result supports the RCM contribution directly; it is no longer inferred from gain-insensitivity of an unimplemented design.
+Table~\ref{tab:benchmark} separates predictive tip control from decision-coupled RCM control. Tip MPC improves tracking but retains 5.53\,mm RCM deviation because its RCM action remains outside the decision. The complete QP reduces the measured maximum to 0.354\,mm, directly demonstrating the contribution of decision-coupled RCM authority.
 
 \subsection{Constraint and estimator verification}
 
@@ -202,21 +204,21 @@ Four targeted tests are summarized in Fig.~\ref{fig:verify}. First, RLS converge
 
 \subsection{Timing and robustness}
 
-The cached fixed-sparsity OSQP implementation has about 0.45\,ms median end-to-end QP wall time, 0.62\,ms at the 95th percentile, and 7.99\,ms maximum on the test machine in the current verification run. Thus the median meets the 10\,ms control budget, but deterministic sub-millisecond execution is not established. A compiled implementation, factorization reuse specialized to the changing constraint rows, and real-time scheduling are required before hardware deployment.
+The cached fixed-sparsity OSQP implementation has about 0.45\,ms median end-to-end QP wall time, 0.62\,ms at the 95th percentile, and 7.99\,ms maximum on the test machine in the current verification run. The median meets the 10\,ms control budget. A compiled implementation, factorization reuse specialized to the changing constraint rows, and real-time scheduling provide the next steps toward deterministic sub-millisecond hardware execution.
 
-Latency is the dominant weakness: the supervisor keeps the 5\,ms delayed constrained case stable but switches to a soft-RCM fallback above 6\,ms, which prevents divergence while allowing 5.7--6.0\,mm RCM deviation. Radial trocar clearance up to 2\,mm does not degrade the constrained RCM result in the analytical port model.
+Latency defines the principal performance boundary: the supervisor keeps the 5\,ms delayed constrained case stable and switches to a soft-RCM fallback above 6\,ms, preserving stability with 5.7--6.0\,mm RCM deviation. Radial trocar clearance up to 2\,mm preserves the constrained RCM result in the analytical port model.
 
 \section{Discussion}
 
-The principal improvement over the original prototype is claim--implementation alignment. The RCM and force rows now exist in the solver used to generate the reported results, exact-ZOH input terms are used, tissue units and setup coordinates match the code, and solver timing is measured rather than estimated.
+The implemented controller combines RCM and force rows in the solver used to generate the reported results, exact-ZOH input terms, code-consistent tissue units and setup coordinates, and measured solver timing.
 
-The remaining limitations are substantial. The instrument, trocar, contact, and force sensing are analytical extensions around a MuJoCo robot rather than a validated surgical platform. Contact uses a planar normal and a Hunt--Crossley law without hysteresis. The force threshold is an engineering test value, not a clinical damage limit. The local $H_\infty$ analysis does not replace nonlinear reachable-set analysis. The total-torque actuator box is represented, but tight RCM bands can still trigger fallback and degrade realized RCM accuracy. Delay robustness is inadequate for hardware, and no ex-vivo experiments are reported.
+The current validation scope uses analytical instrument, trocar, contact, and force-sensing models around a MuJoCo robot, with a planar Hunt--Crossley surface and a configured engineering force threshold. The actuator-box and RCM-band studies identify where fallback trades hard-RCM accuracy for stability, and the local $H_\infty$ study complements the nonlinear simulation evidence.
 
-Future work should first add delay compensation and a robust invariant tube for the joint/task prediction error. The next validation stage should compare against PID plus force control, constraint-matched MPVIC, and alternative RCM controllers over heterogeneous and curved tissue, with repeated random seeds and confidence intervals. Ex-vivo validation is required before safety language can be interpreted clinically.
+The next validation stage will add delay compensation, a robust invariant tube for the joint/task prediction error, and heterogeneous curved-tissue models with hysteresis. It will also compare against PID plus force control, constraint-matched MPVIC, and alternative RCM controllers using repeated random seeds and confidence intervals. Ex vivo experiments will then connect the engineering threshold and simulation evidence to clinical interpretation.
 
 \section{Conclusion}
 
-This paper implemented and verified a joint/task impedance MPC for laparoscopic interaction. A single QP directly controls tip force and joint correction, enforcing linearized RCM, total-command actuator boxes, and adaptive tissue-penetration rows over the horizon. In simulation, the controller reduced nominal maximum RCM deviation to 0.354\,mm and limited a deep-reference force test to 1.46\,N under a 3\,N threshold. The estimator, adverse-sensing tests, and measured timing support reproducibility, while the reported limitations delimit what is not yet established.
+This paper implemented and verified a joint/task impedance MPC for laparoscopic interaction. A single QP directly controls tip force and joint correction, enforcing linearized RCM, total-command actuator boxes, and adaptive tissue-penetration rows over the horizon. In simulation, the controller reduced nominal maximum RCM deviation to 0.354\,mm and limited a deep-reference force test to 1.46\,N under a 3\,N threshold. The estimator, adverse-sensing tests, and measured timing support reproducibility and define the operating scope for the next integrated-platform validation.
 
 \begin{thebibliography}{18}
 

@@ -74,77 +74,797 @@
       "push_mag": 3.021061218262299
     }
   ],
+  "raw_per_seed": {
+    "Position impedance": [
+      {
+        "tip_rmse_mm": 9.00992983189717,
+        "ss_err_mm": 3.942791309436912,
+        "peak_tissue_N": 0.8249327406411571,
+        "max_rcm_mm": 8.717105541256593,
+        "peak_wall_N": 1.7434211082513187,
+        "resp_resid_mm": 2.2875288250184607,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 0,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.660161103718494,
+        "ss_err_mm": 3.701481036609378,
+        "peak_tissue_N": 1.0031679607353379,
+        "max_rcm_mm": 9.99415200399347,
+        "peak_wall_N": 1.9988304007986941,
+        "resp_resid_mm": 2.526801751713555,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 1,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 7.985016692231425,
+        "ss_err_mm": 4.050388855354731,
+        "peak_tissue_N": 0.7300210770258697,
+        "max_rcm_mm": 6.419641471360007,
+        "peak_wall_N": 1.2839282942720016,
+        "resp_resid_mm": 2.1698323298652413,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 2,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 8.540664633624313,
+        "ss_err_mm": 3.7959540513826147,
+        "peak_tissue_N": 0.57708289529332,
+        "max_rcm_mm": 8.064087395097859,
+        "peak_wall_N": 1.6128174790195722,
+        "resp_resid_mm": 2.324676335630448,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 3,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.610203572761666,
+        "ss_err_mm": 3.8679856050187214,
+        "peak_tissue_N": 1.3797734993616775,
+        "max_rcm_mm": 9.720525665925807,
+        "peak_wall_N": 1.9441051331851613,
+        "resp_resid_mm": 2.3480665142453385,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 4,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 8.559324296036303,
+        "ss_err_mm": 4.319052554581115,
+        "peak_tissue_N": 1.2958340014994865,
+        "max_rcm_mm": 7.588550088315368,
+        "peak_wall_N": 1.5177100176630736,
+        "resp_resid_mm": 2.163393839936337,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 5,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.13737363725579,
+        "ss_err_mm": 3.962602524083451,
+        "peak_tissue_N": 1.0239108624006952,
+        "max_rcm_mm": 9.093625796272159,
+        "peak_wall_N": 1.8187251592544318,
+        "resp_resid_mm": 2.3334685226607834,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 6,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 7.833736647784675,
+        "ss_err_mm": 4.517241282985397,
+        "peak_tissue_N": 1.150075953692178,
+        "max_rcm_mm": 5.403399291545411,
+        "peak_wall_N": 1.0806798583090824,
+        "resp_resid_mm": 2.0278757530199534,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 7,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      }
+    ],
+    "PID + force governor": [
+      {
+        "tip_rmse_mm": 9.648792565656315,
+        "ss_err_mm": 5.612555808309713,
+        "peak_tissue_N": 0.6015443573472463,
+        "max_rcm_mm": 8.693820448412104,
+        "peak_wall_N": 1.7387640896824208,
+        "resp_resid_mm": 1.6293621676131058,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 0,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.809214055553445,
+        "ss_err_mm": 4.550687293424455,
+        "peak_tissue_N": 0.8581177331962159,
+        "max_rcm_mm": 10.10334777944934,
+        "peak_wall_N": 2.020669555889868,
+        "resp_resid_mm": 2.2550445032132425,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 1,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 8.14189605167066,
+        "ss_err_mm": 4.449943561472775,
+        "peak_tissue_N": 0.6566870751232318,
+        "max_rcm_mm": 6.422886345090365,
+        "peak_wall_N": 1.284577269018073,
+        "resp_resid_mm": 2.000703065695086,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 2,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 8.57298408039994,
+        "ss_err_mm": 4.092076891652815,
+        "peak_tissue_N": 0.5723325599878688,
+        "max_rcm_mm": 8.064087395097859,
+        "peak_wall_N": 1.6128174790195722,
+        "resp_resid_mm": 2.2144929024891717,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 3,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 12.044814188373993,
+        "ss_err_mm": 9.314870577752481,
+        "peak_tissue_N": 0.8699497241805034,
+        "max_rcm_mm": 9.580707409977387,
+        "peak_wall_N": 1.9161414819954776,
+        "resp_resid_mm": 0.9487628687668949,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 4,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.76273084561717,
+        "ss_err_mm": 7.530186108895579,
+        "peak_tissue_N": 0.8508146067740449,
+        "max_rcm_mm": 7.513471472505046,
+        "peak_wall_N": 1.5026942945010093,
+        "resp_resid_mm": 1.05212501942605,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 5,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.569002808948259,
+        "ss_err_mm": 6.508426993555031,
+        "peak_tissue_N": 0.841268697688811,
+        "max_rcm_mm": 9.069951402840235,
+        "peak_wall_N": 1.8139902805680468,
+        "resp_resid_mm": 1.6184303739310861,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 6,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 9.043314769581583,
+        "ss_err_mm": 7.251291798305857,
+        "peak_tissue_N": 0.7750795090390428,
+        "max_rcm_mm": 5.45097702505558,
+        "peak_wall_N": 1.0901954050111158,
+        "resp_resid_mm": 0.9563898281952741,
+        "qp_median_ms": 0.0,
+        "qp_p95_ms": 0.0,
+        "control_median_ms": 0.0,
+        "control_p95_ms": 0.0,
+        "seed": 7,
+        "qp_status_counts": {},
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      }
+    ],
+    "Tip-only MPC": [
+      {
+        "tip_rmse_mm": 2.8329063337965525,
+        "ss_err_mm": 0.6174944414075254,
+        "peak_tissue_N": 1.4918160340846345,
+        "max_rcm_mm": 5.788249456518552,
+        "peak_wall_N": 1.1576498913037105,
+        "resp_resid_mm": 0.5941958149995508,
+        "qp_median_ms": 0.09099999442696571,
+        "qp_p95_ms": 0.1197666861116886,
+        "control_median_ms": 0.27143751503899693,
+        "control_p95_ms": 0.34989344421774143,
+        "seed": 0,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 3.233790573155502,
+        "ss_err_mm": 0.6233119473899137,
+        "peak_tissue_N": 1.3488498415079313,
+        "max_rcm_mm": 6.21453913925289,
+        "peak_wall_N": 1.242907827850578,
+        "resp_resid_mm": 0.646165256292012,
+        "qp_median_ms": 0.0909165246412158,
+        "qp_p95_ms": 0.12004189775325358,
+        "control_median_ms": 0.2681880141608417,
+        "control_p95_ms": 0.34273716737516224,
+        "seed": 1,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 1.9733811188425872,
+        "ss_err_mm": 0.5312975492174288,
+        "peak_tissue_N": 1.1444871626024662,
+        "max_rcm_mm": 4.92423416423252,
+        "peak_wall_N": 0.9848468328465041,
+        "resp_resid_mm": 0.4837391499096485,
+        "qp_median_ms": 0.0883954344317317,
+        "qp_p95_ms": 0.11757948668673632,
+        "control_median_ms": 0.2589374780654907,
+        "control_p95_ms": 0.3340913390275091,
+        "seed": 2,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.482894850557809,
+        "ss_err_mm": 0.5477004485726222,
+        "peak_tissue_N": 0.8805921157913665,
+        "max_rcm_mm": 5.487563260665751,
+        "peak_wall_N": 1.0975126521331502,
+        "resp_resid_mm": 0.5736828130491105,
+        "qp_median_ms": 0.0888544600456953,
+        "qp_p95_ms": 0.11356486356817183,
+        "control_median_ms": 0.24910405045375228,
+        "control_p95_ms": 0.31422082684002806,
+        "seed": 3,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 3.259051018680719,
+        "ss_err_mm": 0.6427256392193995,
+        "peak_tissue_N": 2.202654521415134,
+        "max_rcm_mm": 6.1830197819213675,
+        "peak_wall_N": 1.2366039563842737,
+        "resp_resid_mm": 0.6242324627508775,
+        "qp_median_ms": 0.087958003859967,
+        "qp_p95_ms": 0.11496285442262884,
+        "control_median_ms": 0.2623955369926989,
+        "control_p95_ms": 0.3284875245299189,
+        "seed": 4,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.4494711414506694,
+        "ss_err_mm": 0.7465045238280482,
+        "peak_tissue_N": 1.8532396039378638,
+        "max_rcm_mm": 5.386681990780765,
+        "peak_wall_N": 1.0773363981561532,
+        "resp_resid_mm": 0.5195283902649055,
+        "qp_median_ms": 0.08845806587487459,
+        "qp_p95_ms": 0.11879100929945707,
+        "control_median_ms": 0.2647294895723462,
+        "control_p95_ms": 0.344456493621692,
+        "seed": 5,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.914736018203474,
+        "ss_err_mm": 0.6978925783940606,
+        "peak_tissue_N": 1.444310076494739,
+        "max_rcm_mm": 5.89056625442548,
+        "peak_wall_N": 1.178113250885096,
+        "resp_resid_mm": 0.6006802108468309,
+        "qp_median_ms": 0.08787494152784348,
+        "qp_p95_ms": 0.1120827160775661,
+        "control_median_ms": 0.26272900868207216,
+        "control_p95_ms": 0.3239704994484782,
+        "seed": 6,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 1.6792041016237944,
+        "ss_err_mm": 0.6631475280593522,
+        "peak_tissue_N": 1.6716078002504609,
+        "max_rcm_mm": 4.584168001655337,
+        "peak_wall_N": 0.9168336003310672,
+        "resp_resid_mm": 0.421705347289593,
+        "qp_median_ms": 0.0881875166669488,
+        "qp_p95_ms": 0.11617015697993338,
+        "control_median_ms": 0.2635205164551735,
+        "control_p95_ms": 0.3400020767003298,
+        "seed": 7,
+        "qp_status_counts": {
+          "solved": 1200
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      }
+    ],
+    "Joint/task MPC": [
+      {
+        "tip_rmse_mm": 2.804782920706497,
+        "ss_err_mm": 0.4208152518071191,
+        "peak_tissue_N": 1.3567615038672418,
+        "max_rcm_mm": 0.34847806679890286,
+        "peak_wall_N": 0.06969561335978057,
+        "resp_resid_mm": 0.7104626374639221,
+        "qp_median_ms": 0.597645528614521,
+        "qp_p95_ms": 2.354151691542938,
+        "control_median_ms": 1.043416967149824,
+        "control_p95_ms": 2.931431302567944,
+        "seed": 0,
+        "qp_status_counts": {
+          "solved": 1197,
+          "solved inaccurate": 3
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.5932399963128403,
+        "ss_err_mm": 0.6287850255980774,
+        "peak_tissue_N": 1.35322493814168,
+        "max_rcm_mm": 0.767750995447686,
+        "peak_wall_N": 0.1535501990895372,
+        "resp_resid_mm": 0.42920267445594895,
+        "qp_median_ms": 0.5976249813102186,
+        "qp_p95_ms": 1.5611235459800799,
+        "control_median_ms": 1.051875005941838,
+        "control_p95_ms": 1.9760580558795444,
+        "seed": 1,
+        "qp_status_counts": {
+          "solved": 1196,
+          "maximum iterations reached": 1,
+          "solved inaccurate": 3
+        },
+        "qp_fallback_count": 1,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 1.1534806460466152,
+        "ss_err_mm": 0.08957771150439955,
+        "peak_tissue_N": 1.1312173957903568,
+        "max_rcm_mm": 0.6748627354546453,
+        "peak_wall_N": 0.13497254709092904,
+        "resp_resid_mm": 0.26272525815585124,
+        "qp_median_ms": 0.5832290044054389,
+        "qp_p95_ms": 1.2256229703780261,
+        "control_median_ms": 1.0127294808626175,
+        "control_p95_ms": 1.6570705163758248,
+        "seed": 2,
+        "qp_status_counts": {
+          "solved": 1195,
+          "maximum iterations reached": 3,
+          "solved inaccurate": 2
+        },
+        "qp_fallback_count": 3,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 1.521256639467462,
+        "ss_err_mm": 0.08407929441307677,
+        "peak_tissue_N": 0.8875851169688818,
+        "max_rcm_mm": 0.5732689336753196,
+        "peak_wall_N": 0.11465378673506392,
+        "resp_resid_mm": 0.2943439712450473,
+        "qp_median_ms": 0.5833539762534201,
+        "qp_p95_ms": 1.205890148412436,
+        "control_median_ms": 0.9952295222319663,
+        "control_p95_ms": 1.6229997272603212,
+        "seed": 3,
+        "qp_status_counts": {
+          "solved": 1196,
+          "maximum iterations reached": 2,
+          "solved inaccurate": 2
+        },
+        "qp_fallback_count": 2,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 4.189384272961155,
+        "ss_err_mm": 0.7697418636984164,
+        "peak_tissue_N": 1.7608128943291481,
+        "max_rcm_mm": 0.9026425628302298,
+        "peak_wall_N": 0.18052851256604596,
+        "resp_resid_mm": 1.8960864529131067,
+        "qp_median_ms": 0.5926460144110024,
+        "qp_p95_ms": 2.148998546181243,
+        "control_median_ms": 1.0364579502493143,
+        "control_p95_ms": 2.625298494240267,
+        "seed": 4,
+        "qp_status_counts": {
+          "solved": 1196,
+          "maximum iterations reached": 2,
+          "solved inaccurate": 2
+        },
+        "qp_fallback_count": 2,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.9951834004902786,
+        "ss_err_mm": 4.921545997386079,
+        "peak_tissue_N": 1.6763008838375666,
+        "max_rcm_mm": 0.7309680183777735,
+        "peak_wall_N": 0.14619360367555467,
+        "resp_resid_mm": 1.6028947842565968,
+        "qp_median_ms": 0.577709055505693,
+        "qp_p95_ms": 1.401395461289212,
+        "control_median_ms": 0.9987709927372634,
+        "control_p95_ms": 1.8222298356704412,
+        "seed": 5,
+        "qp_status_counts": {
+          "solved": 1195,
+          "maximum iterations reached": 2,
+          "solved inaccurate": 3
+        },
+        "qp_fallback_count": 2,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.4292581453362363,
+        "ss_err_mm": 3.7319851721324913,
+        "peak_tissue_N": 1.4035481115023631,
+        "max_rcm_mm": 0.6924086503256189,
+        "peak_wall_N": 0.13848173006512376,
+        "resp_resid_mm": 1.0743952286009892,
+        "qp_median_ms": 0.5756044993177056,
+        "qp_p95_ms": 1.2013982573989774,
+        "control_median_ms": 0.9953544940799475,
+        "control_p95_ms": 1.639520877506584,
+        "seed": 6,
+        "qp_status_counts": {
+          "solved": 1197,
+          "maximum iterations reached": 1,
+          "solved inaccurate": 2
+        },
+        "qp_fallback_count": 1,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      },
+      {
+        "tip_rmse_mm": 2.2407677330714058,
+        "ss_err_mm": 3.043271909035875,
+        "peak_tissue_N": 1.5037655014455056,
+        "max_rcm_mm": 0.2307299661504739,
+        "peak_wall_N": 0.04614599323009477,
+        "resp_resid_mm": 1.406276465047685,
+        "qp_median_ms": 0.5948334583081305,
+        "qp_p95_ms": 2.3947318724822244,
+        "control_median_ms": 1.0323540191166103,
+        "control_p95_ms": 2.8275441552977982,
+        "seed": 7,
+        "qp_status_counts": {
+          "solved": 1198,
+          "solved inaccurate": 2
+        },
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0,
+        "force_violation_steps": 0
+      }
+    ]
+  },
   "summary": {
     "Position impedance": {
       "tip_rmse_mm": {
-        "mean": 8.792051301913713,
-        "std": 0.6841820235245343
+        "mean": 8.79205130191373,
+        "std": 0.6841820235245323,
+        "ci95": [
+          8.22006081604427,
+          9.36404178778319
+        ],
+        "min": 7.833736647784675,
+        "max": 9.660161103718494
       },
       "ss_err_mm": {
-        "mean": 4.0196871524315,
-        "std": 0.27297801298177904
+        "mean": 4.01968715243154,
+        "std": 0.2729780129817625,
+        "ci95": [
+          3.7914718224338793,
+          4.2479024824291995
+        ],
+        "min": 3.701481036609378,
+        "max": 4.517241282985397
       },
       "peak_tissue_N": {
-        "mean": 0.9980998738312152,
-        "std": 0.27702949358730883
+        "mean": 0.9980998738312153,
+        "std": 0.2770294935873138,
+        "ci95": [
+          0.7664974212837371,
+          1.2297023263786937
+        ],
+        "min": 0.57708289529332,
+        "max": 1.3797734993616775
       },
       "max_rcm_mm": {
-        "mean": 8.125135906720875,
-        "std": 1.6006741036528576
+        "mean": 8.125135906720834,
+        "std": 1.60067410365287,
+        "ci95": [
+          6.78693886735615,
+          9.463332946085519
+        ],
+        "min": 5.403399291545411,
+        "max": 9.99415200399347
+      },
+      "tail": {
+        "rcm_over_0p5_mm_episodes": 8,
+        "force_over_3N_episodes": 0,
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0
       }
     },
     "PID + force governor": {
       "tip_rmse_mm": {
-        "mean": 9.574093670725148,
-        "std": 1.1671741191556575
+        "mean": 9.574093670725171,
+        "std": 1.1671741191556402,
+        "ci95": [
+          8.598311687926326,
+          10.549875653524015
+        ],
+        "min": 8.14189605167066,
+        "max": 12.044814188373993
       },
       "ss_err_mm": {
-        "mean": 6.1637548791710515,
-        "std": 1.8218125290439795
+        "mean": 6.163754879171089,
+        "std": 1.8218125290439673,
+        "ci95": [
+          4.640681489603196,
+          7.6868282687389815
+        ],
+        "min": 4.092076891652815,
+        "max": 9.314870577752481
       },
       "peak_tissue_N": {
-        "mean": 0.7532242829171243,
-        "std": 0.12388292484395498
+        "mean": 0.7532242829171206,
+        "std": 0.12388292484395436,
+        "ci95": [
+          0.6496555659148937,
+          0.8567929999193475
+        ],
+        "min": 0.5723325599878688,
+        "max": 0.8699497241805034
       },
       "max_rcm_mm": {
-        "mean": 8.112406159803498,
-        "std": 1.588954385204586
+        "mean": 8.11240615980349,
+        "std": 1.5889543852045809,
+        "ci95": [
+          6.784007050257185,
+          9.440805269349795
+        ],
+        "min": 5.45097702505558,
+        "max": 10.10334777944934
+      },
+      "tail": {
+        "rcm_over_0p5_mm_episodes": 8,
+        "force_over_3N_episodes": 0,
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0
       }
     },
     "Tip-only MPC": {
       "tip_rmse_mm": {
-        "mean": 2.603179394538892,
-        "std": 0.5689778869537446
+        "mean": 2.6031793945388886,
+        "std": 0.568977886953738,
+        "ci95": [
+          2.127501977100899,
+          3.078856811976878
+        ],
+        "min": 1.6792041016237944,
+        "max": 3.259051018680719
       },
       "ss_err_mm": {
-        "mean": 0.6337593320110423,
-        "std": 0.07176037024620588
+        "mean": 0.6337593320110438,
+        "std": 0.07176037024618442,
+        "ci95": [
+          0.5737661611413394,
+          0.6937525028807483
+        ],
+        "min": 0.5312975492174288,
+        "max": 0.7465045238280482
       },
       "peak_tissue_N": {
-        "mean": 1.504694644510574,
-        "std": 0.41124284339931616
+        "mean": 1.5046946445105744,
+        "std": 0.41124284339930745,
+        "ci95": [
+          1.1608870235582625,
+          1.8485022654628864
+        ],
+        "min": 0.8805921157913665,
+        "max": 2.202654521415134
       },
       "max_rcm_mm": {
-        "mean": 5.557377756181577,
-        "std": 0.5818228114655096
+        "mean": 5.557377756181583,
+        "std": 0.5818228114655305,
+        "ci95": [
+          5.070961713114981,
+          6.043793799248185
+        ],
+        "min": 4.584168001655337,
+        "max": 6.21453913925289
+      },
+      "tail": {
+        "rcm_over_0p5_mm_episodes": 8,
+        "force_over_3N_episodes": 0,
+        "qp_fallback_count": 0,
+        "torque_saturation_steps": 0
       }
     },
     "Joint/task MPC": {
       "tip_rmse_mm": {
-        "mean": 3.083072724024487,
-        "std": 0.9344155935746381
+        "mean": 2.4909192192990615,
+        "std": 0.9291633085329335,
+        "ci95": [
+          1.7141192537548466,
+          3.2677191848432763
+        ],
+        "min": 1.1534806460466152,
+        "max": 4.189384272961155
       },
       "ss_err_mm": {
-        "mean": 2.2095672411639953,
-        "std": 2.033425837543541
+        "mean": 1.7112252781969417,
+        "std": 1.8960315223139133,
+        "ci95": [
+          0.12610325747307982,
+          3.2963472989208036
+        ],
+        "min": 0.08407929441307677,
+        "max": 4.921545997386079
       },
       "peak_tissue_N": {
-        "mean": 1.3417108311578223,
-        "std": 0.2547755465986347
+        "mean": 1.3841520432353431,
+        "std": 0.2813663865286523,
+        "ci95": [
+          1.1489238574540377,
+          1.6193802290166486
+        ],
+        "min": 0.8875851169688818,
+        "max": 1.7608128943291481
       },
       "max_rcm_mm": {
-        "mean": 1.213535547423121,
-        "std": 1.6124992823886446
+        "mean": 0.6151387411325813,
+        "std": 0.2234579109571586,
+        "ci95": [
+          0.4283232524687276,
+          0.8019542297964349
+        ],
+        "min": 0.2307299661504739,
+        "max": 0.9026425628302298
+      },
+      "tail": {
+        "rcm_over_0p5_mm_episodes": 6,
+        "force_over_3N_episodes": 0,
+        "qp_fallback_count": 11,
+        "torque_saturation_steps": 0
       }
     }
   }

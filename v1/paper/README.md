@@ -1,8 +1,11 @@
 # Laparoscopy v1 paper
 
-Current title: **A Predictive Interaction Dynamics Framework for Safe Robot-Assisted Laparoscopy with Remote Center-of-Motion Constraints**
+Current title: **Predictive Interaction Dynamics for Robot-Assisted Laparoscopy with Remote Center-of-Motion and Tissue-Force Constraints**
 
-The v1 manuscript is claim-aligned with `../simulation/`.
+The v1 manuscript is implementation-aligned with `../simulation/`. Stored
+JSON, figures, and PDFs predate the latest controller corrections, so the
+maintained body excludes the archived quantitative block by default until a
+complete regeneration is available.
 
 Build:
 
@@ -11,19 +14,23 @@ latexmk -pdf laparoscopy_ieee.tex
 latexmk -pdf laparoscopy_arxiv.tex
 ```
 
-The title uses **safe** to describe the framework objective, while the text
-keeps the reported 3 N value as an engineering simulation threshold rather than
-a clinical tissue-damage limit.
-
-The safety, invariance, oscillator, and \(H_\infty\) material is retained in
-v1, but stated at the correct evidence level:
+The force, oscillator, and \(H_\infty\) material is stated at the implemented
+evidence level:
 
 - the online benchmark uses the constrained joint/task QP;
-- the oscillator is implemented and stress-tested, although the current
-  slow-respiration case shows negligible measured benefit;
+- the oscillator free response is connected to the deployed joint/task QP and
+  covered by focused regression tests; detuning metrics await regeneration;
 - `../simulation/lap_hinf_design.py` computes the H2/H-infinity state-feedback
   design and unconstrained MPC/LQR gain match;
-- `../simulation/lap_commonP_sdp.py` provides a common-P LMI certificate for
-  the linear post-feedforward residual plant;
-- nonlinear clinical safety/invariance is not claimed without hardware/ex vivo
-  validation and quantified nonlinear residual margins.
+- `../simulation/lap_commonP_sdp.py` provides a common-P weighted state/control
+  certificate for a separate six-state linear tip model;
+- tissue-force invariance, recursive feasibility, and clinical safety are not
+  claimed without a contact-force output, terminal set, quantified nonlinear
+  margins, and hardware or ex vivo validation.
+
+Do not define `\includeStalePreCorrectionResults` for a submission build. That
+switch exists only to preserve the pre-correction tables and figures as an
+auditable development record.
+
+`body_short_verified.tex`, `../laparoscopy.md`, and `../laparoscopy_zh.md` are
+archived working drafts and are not included by either maintained wrapper.

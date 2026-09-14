@@ -29,8 +29,10 @@ from numpy.linalg import inv
 import scipy.sparse as sp
 from scipy.linalg import solve_discrete_are
 
-P_HRI = Path(__file__).resolve().parents[3] / "pHRI" / "simulation"
-sys.path.insert(0, str(P_HRI))
+sys.path.insert(0, str(Path(__file__).parent))
+from fr3_dependency import add_fr3_sim_to_path  # noqa: E402
+
+add_fr3_sim_to_path("fr3_impedance")
 from fr3_impedance import build_operational_space_model  # noqa: E402
 
 
@@ -47,9 +49,10 @@ class LapCtrlParams:
     terminal_scale: float = 5.0
     F_max: float = 8.0
     rcm_band: float = 1.0e-4
+    rcm_trust_radius: float = 2.0e-2
     force_tightening: float = 0.33
     actuator_delay: float = 0.0
-    delay_fallback_threshold: float = 6.0e-3
+    delay_fallback_threshold: float = 4.0e-3
     torque_filter_tau: float = 0.0
     torque_slew_rate: float = np.inf
 
@@ -314,7 +317,7 @@ class LapController:
                 eps_abs=1.0e-4,
                 eps_rel=1.0e-4,
                 max_iter=1200,
-                polish=False,
+                polishing=False,
                 warm_starting=True,
             )
             cached = (solver, Ppattern)
@@ -331,7 +334,7 @@ class LapController:
             l=lower,
             u=upper,
         )
-        result = solver.solve()
+        result = solver.solve(raise_error=False)
         elapsed = 1.0e3 * (time.perf_counter() - start)
         self.solve_times_ms.append(elapsed)
         self.last_qp_status = result.info.status
@@ -409,13 +412,17 @@ class LapController:
                 upper.append(self.tau_max[j] - tau_ff[j])
 
         e_rcm = self.env.rcm_error(st, p_rcm)
-        q_now_err = st.q - self.q0
         for i in range(N):
             block = slice(nx * i, nx * (i + 1))
             G_i = Gamma[block]
             phi_i = Phi[block]
             qfree = phi_i[6:13] @ x0
             qmap = G_i[6:13]
+            q_offset = self.q0 + qfree - st.q
+            for joint in range(7):
+                rows.append(qmap[joint])
+                lower.append(-self.p.rcm_trust_radius - q_offset[joint])
+                upper.append(self.p.rcm_trust_radius - q_offset[joint])
             rcm_offset = e_rcm + J_rcm @ (self.q0 + qfree - st.q)
             rcm_map = J_rcm @ qmap
             for axis in range(3):
@@ -432,8 +439,7 @@ class LapController:
         for i in range(N):
             block = slice(nx * i, nx * (i + 1))
             G_i = Gamma[block]
-            phi_i = Phi[block]
-            efree = phi_i[:3] @ x0
+            efree = xfree[nx * i : nx * i + 3]
             emap = G_i[:3]
             # delta = delta_ref - s^T e <= delta_max
             row = -self.env.s0 @ emap
@@ -452,7 +458,7 @@ class LapController:
         if sol is None:
             return np.zeros(3), np.zeros(7)
         first = sol[:nu]
-        predicted = Phi @ x0 + Gamma @ sol
+        predicted = xfree + Gamma @ sol
         max_rcm = 0.0
         max_force = 0.0
         for i in range(N):
@@ -467,6 +473,11 @@ class LapController:
         return first[:3], first[3:]
 
     def control(self, dyn, st, p_d, dp_d, ddp_d, R_d, p_rcm, resolve=True):
+        control_start = time.perf_counter()
+        solve_start = len(self.solve_times_ms)
+        qp_fallback = False
+        primary_qp_status = "not_run"
+        fallback_qp_status = "not_run"
         p_tip, _, v_tip, J_tip = self.env.tip_state(dyn, st)
         M_inv = inv(dyn.M)
         Lam_inv = J_tip @ M_inv @ J_tip.T + 1.0e-6 * np.eye(3)
@@ -545,14 +556,17 @@ class LapController:
                     J_rcm,
                     M_inv,
                     tau_ff,
-                    None,
+                    d_free,
                 )
+                primary_qp_status = self.last_qp_status
                 if self.last_qp_status not in ("solved", "solved inaccurate"):
+                    qp_fallback = True
                     # A zero predictive correction is not a safe fallback:
                     # it removes task/RCM feedback exactly when the constrained
                     # linearization is infeasible.  Reuse the stable tip-MPC
                     # branch and soft null-space RCM regulation for this step.
                     F = self._tip_mpc(e, de, Lam_inv, None)
+                    fallback_qp_status = self.last_qp_status
                     os_model = build_operational_space_model(dyn, st.ee_vel)
                     tau_aux = os_model.N_bar.T @ (
                         -self.p.k_rcm_soft * J_rcm.T @ e_rcm
@@ -566,6 +580,7 @@ class LapController:
                 F = self._tip_mpc(
                     e, de, Lam_inv, None if delay_fallback else d_free
                 )
+                primary_qp_status = self.last_qp_status
                 os_model = build_operational_space_model(dyn, st.ee_vel)
                 tau_aux = os_model.N_bar.T @ (
                     -self.p.k_rcm_soft * J_rcm.T @ e_rcm
@@ -603,8 +618,11 @@ class LapController:
             "p_tip": p_tip,
             "ke_hat": self.ke_hat,
             "b_hat": self.b_hat,
-            "qp_status": self.last_qp_status,
-            "qp_ms": self.solve_times_ms[-1] if self.solve_times_ms else 0.0,
+            "qp_status": primary_qp_status,
+            "fallback_qp_status": fallback_qp_status,
+            "qp_ms": float(sum(self.solve_times_ms[solve_start:])),
+            "qp_solve_count": len(self.solve_times_ms) - solve_start,
+            "qp_fallback": qp_fallback,
             "predicted_peak_force": self.last_force_prediction,
             "predicted_peak_rcm": self.last_rcm_prediction,
             "delay_fallback": (
@@ -612,4 +630,5 @@ class LapController:
                 and self.p.actuator_delay > self.p.delay_fallback_threshold
             ),
         }
+        info["control_ms"] = 1.0e3 * (time.perf_counter() - control_start)
         return tau, info

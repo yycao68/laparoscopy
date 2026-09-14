@@ -88,7 +88,7 @@ def run(mode, k_rcm=None):
     n_steps = int(T_END / dt)
 
     log = {k: [] for k in ("t", "tip_err", "tip_s", "ref_s", "F_tissue",
-                           "rcm", "wall_F", "d_hat", "qp_ms")}
+                           "rcm", "wall_F", "d_hat", "qp_ms", "control_ms")}
     F_hold = np.zeros(3)
     for k in range(n_steps):
         t = k * dt
@@ -120,6 +120,7 @@ def run(mode, k_rcm=None):
         log["d_hat"].append(float(np.linalg.norm(info["d_hat"])))
         if resolve and mode not in ("impedance", "pid_force"):
             log["qp_ms"].append(float(info["qp_ms"]))
+            log["control_ms"].append(float(info["control_ms"]))
 
         env.step()
 
@@ -141,6 +142,14 @@ def metrics(L):
         resp_resid_mm=float(np.std(L["tip_err"][nonpush_hold])),
         qp_median_ms=(float(np.median(L["qp_ms"])) if L["qp_ms"].size else 0.0),
         qp_p95_ms=(float(np.percentile(L["qp_ms"], 95)) if L["qp_ms"].size else 0.0),
+        control_median_ms=(
+            float(np.median(L["control_ms"])) if L["control_ms"].size else 0.0
+        ),
+        control_p95_ms=(
+            float(np.percentile(L["control_ms"], 95))
+            if L["control_ms"].size
+            else 0.0
+        ),
     )
 
 
@@ -165,8 +174,10 @@ def main():
     print("Units: mm, mm, N, mm, N, mm")
     for name, values in table.items():
         if values["qp_median_ms"] > 0:
-            print(f"{name}: QP median {values['qp_median_ms']:.3f} ms, "
-                  f"p95 {values['qp_p95_ms']:.3f} ms")
+            print(f"{name}: OSQP median {values['qp_median_ms']:.3f} ms, "
+                f"p95 {values['qp_p95_ms']:.3f} ms; "
+                f"full control median {values['control_median_ms']:.3f} ms, "
+                f"p95 {values['control_p95_ms']:.3f} ms")
 
     # ---- figure ----
     fig, ax = plt.subplots(2, 3, figsize=(15, 8))
