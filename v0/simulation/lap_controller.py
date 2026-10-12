@@ -22,7 +22,7 @@ import numpy as np
 from numpy.linalg import inv
 import scipy.sparse as sp
 
-FR3_SIM = Path(__file__).resolve().parents[2] / "fr3_impedance" / "simulation"
+FR3_SIM = Path(__file__).resolve().parents[3] / "pHRI" / "simulation"
 sys.path.insert(0, str(FR3_SIM))
 from fr3_impedance import build_operational_space_model     # noqa: E402
 from so3_utils import rotation_error_matrix                 # noqa: E402

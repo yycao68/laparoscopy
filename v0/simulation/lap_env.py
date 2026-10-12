@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 # Reuse the FR3 MuJoCo bridge and helpers from the pHRI project.
-FR3_SIM = Path(__file__).resolve().parents[2] / "pHRI" / "simulation"
+FR3_SIM = Path(__file__).resolve().parents[3] / "pHRI" / "simulation"
 sys.path.insert(0, str(FR3_SIM))
 from fr3_mujoco import FR3MuJoCoEnv, Q_NEUTRAL          # noqa: E402
 from so3_utils import skew                               # noqa: E402

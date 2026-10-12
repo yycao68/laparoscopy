@@ -34,7 +34,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 # The FR3 MuJoCo bridge moved to ../../pHRI/simulation (project renamed from
 # fr3_impedance); make it importable before lap_env's stale hard-coded path runs.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "pHRI" / "simulation"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "pHRI" / "simulation"))
 from lap_env import LapEnv
 from lap_controller import LapCtrlParams
 from lap_hinf_design import tip_plant
